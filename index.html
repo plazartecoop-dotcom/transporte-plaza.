@@ -280,7 +280,8 @@
     <button class="nav-pill active" onclick="mostrar('viajes',this)">📋 Viajes</button>
     <button class="nav-pill" onclick="mostrar('facturar',this)">🧾 Para Facturar</button>
     <button class="nav-pill" onclick="mostrar('boletin',this)">👤 Boletín Chofer</button>
-    <button class="nav-pill" onclick="mostrar('camion',this)">🚚 Panel Camión <span class="badge-alert">1</span></button>
+    <button class="nav-pill" onclick="mostrar('choferes',this)">🪪 Choferes</button>
+    <button class="nav-pill" onclick="mostrar('camion',this)">🚚 Panel Camión <span class="badge-alert" id="badgeCamion" style="display:none;">!</span></button>
     <button class="nav-pill" onclick="mostrar('tarifas',this)">💲 Tarifas</button>
     <button class="nav-pill" onclick="mostrar('stats',this)">📊 Estadísticas</button>
   </div>
@@ -318,7 +319,8 @@
         <label>KM Tabla<input type="number" id="v-kmtabla" step="0.1"></label>
         <label>Total a Facturar<input type="number" id="v-totalfact" step="0.01"></label>
         <label>KM Real<input type="number" id="v-kmreal" step="0.1"></label>
-        <label>Chofer<input type="text" id="v-chofer" placeholder="G. Pérez"></label>
+        <label>Chofer<input type="text" id="v-chofer" list="listaChoferes" placeholder="G. Pérez"></label>
+        <datalist id="listaChoferes"></datalist>
         <label>Camión<input type="text" id="v-camion" placeholder="C1"></label>
         <label>Gas-Oil (litros)<input type="number" id="v-gasoil" step="0.1"></label>
       </div>
@@ -364,7 +366,7 @@
         <tr><td colspan="18" style="text-align:center;color:var(--muted);padding:20px;">Cargando viajes…</td></tr>
       </tbody>
       <tfoot>
-        <tr><td colspan="10" style="text-align:right;">Total mes →</td><td class="num facturable">4.145.958,08</td><td colspan="5"></td></tr>
+        <tr><td colspan="10" style="text-align:right;">Total mes →</td><td class="num facturable" id="totalMesViajes">0,00</td><td colspan="5"></td></tr>
       </tfoot>
     </table>
     </div>
@@ -474,6 +476,39 @@
     </div>
   </section>
 
+  <section class="section" id="choferes">
+    <div class="meta-title">Choferes <span>· ficha y datos de contacto</span></div>
+    <div class="section-actions">
+      <button class="btn-accion" style="border-color:var(--orange);color:var(--orange);font-weight:800;" onclick="abrirFormChofer()">➕ Nuevo chofer</button>
+    </div>
+
+    <div class="card" id="form-chofer" style="display:none;margin-bottom:12px;">
+      <div class="meta-title" style="font-size:13px;">Nuevo chofer / Editar chofer</div>
+      <div class="form-grid">
+        <label>Nombre completo<input type="text" id="c-nombre" placeholder="Gustavo Pérez"></label>
+        <label>DNI<input type="text" id="c-dni" placeholder="Opcional"></label>
+        <label>Teléfono<input type="text" id="c-telefono" placeholder="Opcional"></label>
+        <label>Camión habitual<input type="text" id="c-camion" placeholder="Ej: C1"></label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-orange" onclick="guardarChofer()">💾 Guardar chofer</button>
+        <button class="btn-ghost" onclick="cerrarFormChofer()">Cancelar</button>
+      </div>
+      <div class="form-hint">💡 El nombre que cargues acá es el que va a aparecer para elegir en "Nuevo viaje" y en el Boletín — evitá escribirlo distinto cada vez (ej: "G. Pérez" vs "Gustavo Pérez") para que no se dupliquen los totales.</div>
+    </div>
+
+    <div class="invoice-card">
+      <div style="overflow-x:auto;">
+      <table class="plain">
+        <thead><tr><th>Nombre</th><th>DNI</th><th>Teléfono</th><th>Camión</th><th class="col-accion"></th></tr></thead>
+        <tbody id="tbody-choferes">
+          <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Cargando choferes…</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="camion">
     <div class="meta-title">Panel del Camión <span>· service y combustible</span></div>
     <div class="year-row" id="yearRowCamion">
@@ -500,8 +535,8 @@
       <button class="btn-accion" onclick="copiarSeccion('camion')">📋 Copiar</button>
     </div>
     <div class="camion-tabs">
-      <div class="camion-tab active">Camión 1</div>
-      <div class="camion-tab" style="opacity:0.4;">+ Camión 2</div>
+      <div class="camion-tab active" style="pointer-events:none;">Camión 1</div>
+      <div class="camion-tab" style="opacity:0.4;pointer-events:none;cursor:default;" title="Todavía no disponible">+ Camión 2 (próximamente)</div>
     </div>
     <div class="grid-2">
       <div class="card">
@@ -643,9 +678,9 @@
     </div>
 
     <div class="stat-pair" style="margin-top:12px;">
-      <div class="stat-box"><div class="lbl">Combustible (año)</div><div class="val">$ 2.480.500</div></div>
-      <div class="stat-box"><div class="lbl">Facturado (año)</div><div class="val">$ 18.240.900</div></div>
-      <div class="stat-box"><div class="lbl">Ganancia neta (año)</div><div class="val" style="color:var(--green);">$ 12.110.300</div></div>
+      <div class="stat-box"><div class="lbl">Combustible (año)</div><div class="val" id="statCombustibleAnio">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Facturado (año)</div><div class="val" id="statFacturadoAnio">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Ganancia neta (año)</div><div class="val" id="statGananciaAnio" style="color:var(--green);">$ 0</div></div>
     </div>
   </section>
 
@@ -653,8 +688,8 @@
 
 
 <div class="float-bar" id="floatbar">
-  <span><b id="selCount">2</b> seleccionados</span>
-  <button>Enviar a Para Facturar →</button>
+  <span><b id="selCount">0</b> seleccionados</span>
+  <button onclick="irAParaFacturar()">Ver en Para Facturar →</button>
 </div>
 
 <script>
@@ -667,6 +702,7 @@ function mostrar(id, btn){
   document.getElementById('floatbar').style.display = (id==='viajes') ? 'flex' : 'none';
   if(id==='facturar') cargarParaFacturar(anioActual, mesActual);
   if(id==='boletin') cargarBoletin(anioActual, mesActual);
+  if(id==='choferes') cargarChoferes();
   if(id==='camion') cargarPanelCamion();
   if(id==='stats') cargarStatsReal(anioActual);
 }
@@ -681,6 +717,11 @@ document.querySelectorAll('tbody tr').forEach(row=>{
 function updateSel(){
   const n = document.querySelectorAll('#viajes tbody input[type=checkbox]:checked').length;
   document.getElementById('selCount').innerText = n;
+}
+
+function irAParaFacturar(){
+  const navPill = Array.from(document.querySelectorAll('.nav-pill')).find(p => p.getAttribute('onclick').includes("'facturar'"));
+  mostrar('facturar', navPill);
 }
 document.querySelectorAll('.chofer-chip').forEach(c=>{
   c.addEventListener('click', ()=>{document.querySelectorAll('.chofer-chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');});
@@ -756,12 +797,15 @@ function cargarViajes(anio, mes){
     if(!data){
       tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:var(--muted);padding:20px;">No hay viajes cargados este mes. Tocá "➕ Nuevo viaje" para empezar.</td></tr>';
       document.getElementById('contadorViajes').innerText = '· 0 viajes';
+      document.getElementById('totalMesViajes').innerText = '0,00';
       return;
     }
     const ids = Object.keys(data);
+    let totalMes = 0;
     ids.forEach(id => {
       const v = data[id];
       const totalFact = parseFloat(v.totalFact) || 0;
+      totalMes += totalFact;
       const porc18 = totalFact * 0.18;
       const resultado = totalFact - porc18;
       const tr = document.createElement('tr');
@@ -780,6 +824,7 @@ function cargarViajes(anio, mes){
       tbody.appendChild(tr);
     });
     document.getElementById('contadorViajes').innerText = `· ${ids.length} viaje${ids.length===1?'':'s'}`;
+    document.getElementById('totalMesViajes').innerText = fmtNum(totalMes);
   }, (err) => {
     tbody.innerHTML = `<tr><td colspan="18" style="text-align:center;color:#C1503A;padding:20px;">⚠️ Error al leer de Firebase: ${err.message}</td></tr>`;
   });
@@ -875,6 +920,7 @@ function borrarViaje(id){
 function toggleParaFacturar(id, valor){
   const path = `viajes/a${anioActual}/${mesActual}/${id}`;
   window.fb.update(window.fb.ref(window.fb.db, path), { paraFacturar: valor });
+  updateSel();
 }
 
 // ===== TARIFAS POR DESTINO: guardar, leer en vivo, editar =====
@@ -1069,6 +1115,83 @@ function cargarTarifasDestino(){
 }
 
 // ===== TARIFA BOLSAS ($/km): guardar, leer en vivo, editar =====
+// ===== CHOFERES: ficha, listado y autocompletado en Viajes =====
+let choferesCache = [];
+
+function abrirFormChofer(){
+  choferEditandoId = null;
+  ['c-nombre','c-dni','c-telefono','c-camion'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('form-chofer').style.display = 'block';
+  document.getElementById('form-chofer').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function cerrarFormChofer(){
+  document.getElementById('form-chofer').style.display = 'none';
+  choferEditandoId = null;
+}
+
+let choferEditandoId = null;
+
+function guardarChofer(){
+  const nombre = document.getElementById('c-nombre').value.trim();
+  const dni = document.getElementById('c-dni').value.trim();
+  const telefono = document.getElementById('c-telefono').value.trim();
+  const camion = document.getElementById('c-camion').value.trim();
+  if(!nombre){ alert('Cargá al menos el nombre.'); return; }
+  const datos = { nombre, dni, telefono, camion };
+  if(choferEditandoId){
+    window.fb.update(window.fb.ref(window.fb.db, `choferes/${choferEditandoId}`), datos).then(()=>cerrarFormChofer());
+  } else {
+    const nuevoRef = window.fb.push(window.fb.ref(window.fb.db, 'choferes'));
+    window.fb.set(nuevoRef, datos).then(()=>cerrarFormChofer());
+  }
+}
+
+function editarChofer(id){
+  const ch = choferesCache.find(c=>c.id===id);
+  if(!ch) return;
+  document.getElementById('c-nombre').value = ch.nombre||'';
+  document.getElementById('c-dni').value = ch.dni||'';
+  document.getElementById('c-telefono').value = ch.telefono||'';
+  document.getElementById('c-camion').value = ch.camion||'';
+  choferEditandoId = id;
+  document.getElementById('form-chofer').style.display = 'block';
+  document.getElementById('form-chofer').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function borrarChofer(id){
+  if(!confirm('¿Borrar este chofer? No borra sus viajes ni boletines ya cargados.')) return;
+  window.fb.remove(window.fb.ref(window.fb.db, `choferes/${id}`));
+}
+
+function cargarChoferes(){
+  if(!window.fb) return;
+  window.fb.onValue(window.fb.ref(window.fb.db, 'choferes'), (snap)=>{
+    const data = snap.val();
+    choferesCache = data ? Object.entries(data).map(([id,v])=>({id, ...v})) : [];
+    choferesCache.sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
+
+    // Llena el datalist para el formulario de "Nuevo viaje"
+    const datalist = document.getElementById('listaChoferes');
+    if(datalist) datalist.innerHTML = choferesCache.map(c=>`<option value="${c.nombre}">`).join('');
+
+    // Llena la tabla de la pestaña Choferes
+    const tbody = document.getElementById('tbody-choferes');
+    if(!tbody) return;
+    tbody.innerHTML = '';
+    if(choferesCache.length===0){
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No hay choferes cargados todavía. Tocá "➕ Nuevo chofer" para empezar.</td></tr>';
+      return;
+    }
+    choferesCache.forEach(c=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${c.nombre||''}</td><td>${c.dni||''}</td><td>${c.telefono||''}</td><td>${c.camion||''}</td><td class="col-accion"><button class="btn-edit" onclick="editarChofer('${c.id}')">✏️</button> <button class="btn-edit" onclick="borrarChofer('${c.id}')">🗑️</button></td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+
 function guardarTarifaBolsas(){
   const tarifa = document.getElementById('tb-tarifa').value;
   const desde = document.getElementById('tb-desde').value;
@@ -1117,15 +1240,8 @@ function cargarTarifasBolsas(){
 }
 
 // ===== ESTADÍSTICAS: gráfico comparativo =====
-// Datos de ejemplo (mock) — cuando esté Firebase, esto se arma sumando
-// cada mes: gasto real en combustible, total facturado por tarifas, y
-// ganancia neta (facturado - 18% chofer - combustible).
-const statsDataEjemplo = {
-  labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago'],
-  combustible: [180000,175000,210000,230000,260000,290000,310000,340000],
-  tarifas:     [1450000,1390000,1620000,1710000,1980000,2150000,2280000,2410000],
-  ganancias:   [990000,940000,1080000,1140000,1310000,1420000,1500000,1560000],
-};
+// El gráfico arranca vacío. Se llena con datos reales al entrar a la pestaña (cargarStatsReal).
+const mesesDelAnio = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
 let chartStats;
 function initChartStats(){
@@ -1134,11 +1250,11 @@ function initChartStats(){
   chartStats = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: statsDataEjemplo.labels,
+      labels: mesesDelAnio,
       datasets: [
-        { label:'Combustible', data: statsDataEjemplo.combustible, borderColor:'#C1503A', backgroundColor:'#C1503A', tension:0.3, pointRadius:3 },
-        { label:'Tarifas (facturado)', data: statsDataEjemplo.tarifas, borderColor:'#F0A63E', backgroundColor:'#F0A63E', tension:0.3, pointRadius:3 },
-        { label:'Ganancia neta', data: statsDataEjemplo.ganancias, borderColor:'#4C8767', backgroundColor:'#4C8767', tension:0.3, pointRadius:3 },
+        { label:'Combustible', data: new Array(12).fill(0), borderColor:'#C1503A', backgroundColor:'#C1503A', tension:0.3, pointRadius:3 },
+        { label:'Tarifas (facturado)', data: new Array(12).fill(0), borderColor:'#F0A63E', backgroundColor:'#F0A63E', tension:0.3, pointRadius:3 },
+        { label:'Ganancia neta', data: new Array(12).fill(0), borderColor:'#4C8767', backgroundColor:'#4C8767', tension:0.3, pointRadius:3 },
       ]
     },
     options: {
@@ -1367,9 +1483,10 @@ function cargarPanelCamion(){
       document.getElementById('gaugeMetaLabel').innerText = 'Meta ' + fmtNum(p.metaService).split(',')[0];
       const faltan = (p.metaService||10000) - kmAcumulado;
       const alerta = document.getElementById('gaugeAlerta');
-      if(faltan <= 0){ alerta.innerText = '🔴 ¡Service vencido! Pasaste la meta.'; alerta.style.color = '#C1503A'; }
-      else if(faltan <= 1000){ alerta.innerText = `⚠️ Faltan ${fmtNum(faltan).split(',')[0]} km`; alerta.style.color = '#F0A63E'; }
-      else { alerta.innerText = `✅ Faltan ${fmtNum(faltan).split(',')[0]} km`; alerta.style.color = 'var(--green)'; }
+      const badge = document.getElementById('badgeCamion');
+      if(faltan <= 0){ alerta.innerText = '🔴 ¡Service vencido! Pasaste la meta.'; alerta.style.color = '#C1503A'; badge.style.display='inline'; }
+      else if(faltan <= 1000){ alerta.innerText = `⚠️ Faltan ${fmtNum(faltan).split(',')[0]} km`; alerta.style.color = '#F0A63E'; badge.style.display='inline'; }
+      else { alerta.innerText = `✅ Faltan ${fmtNum(faltan).split(',')[0]} km`; alerta.style.color = 'var(--green)'; badge.style.display='none'; }
     });
   });
 }
@@ -1476,9 +1593,9 @@ function cargarStatsReal(anio){
       chartStats.data.datasets[1].data = tarifas;
       chartStats.data.datasets[2].data = ganancias;
       chartStats.update();
-      document.querySelectorAll('#stats .stat-box .val')[0].innerText = '$ ' + fmtNum(sumCombustible).split(',')[0];
-      document.querySelectorAll('#stats .stat-box .val')[1].innerText = '$ ' + fmtNum(sumTarifas).split(',')[0];
-      document.querySelectorAll('#stats .stat-box .val')[2].innerText = '$ ' + fmtNum(sumGanancias).split(',')[0];
+      document.getElementById('statCombustibleAnio').innerText = '$ ' + fmtNum(sumCombustible).split(',')[0];
+      document.getElementById('statFacturadoAnio').innerText = '$ ' + fmtNum(sumTarifas).split(',')[0];
+      document.getElementById('statGananciaAnio').innerText = '$ ' + fmtNum(sumGanancias).split(',')[0];
     });
   });
 }
@@ -1489,6 +1606,8 @@ function esperarFirebaseYcargar(intentos){
     cargarViajes(anioActual, mesActual);
     cargarTarifasDestino();
     cargarTarifasBolsas();
+    cargarPanelCamion();
+    cargarChoferes();
   } else if(intentos > 0){
     setTimeout(()=>esperarFirebaseYcargar(intentos-1), 200);
   } else {
