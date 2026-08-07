@@ -312,9 +312,9 @@
         <label>Origen<input type="text" id="v-origen" list="listaDestinos" placeholder="Dovales" onchange="autocompletarTarifa()"></label>
         <datalist id="listaDestinos"></datalist>
         <label>Producto<input type="text" id="v-producto" placeholder="Exp. Soja"></label>
-        <label>Kilos<input type="number" id="v-kilos" step="1"></label>
-        <label>Kg. Af.<input type="number" id="v-kgaf" step="1"></label>
-        <label>Tarifa<input type="number" id="v-tarifa" step="0.01"></label>
+        <label>Kilos<input type="number" id="v-kilos" step="1" oninput="autocompletarKgAf()"></label>
+        <label>Kg. Af.<input type="number" id="v-kgaf" step="1" oninput="recalcularTotalFact()"></label>
+        <label>Tarifa<input type="number" id="v-tarifa" step="0.01" oninput="recalcularTotalFact()"></label>
         <label>KM Tabla<input type="number" id="v-kmtabla" step="0.1"></label>
         <label>Total a Facturar<input type="number" id="v-totalfact" step="0.01"></label>
         <label>KM Real<input type="number" id="v-kmreal" step="0.1"></label>
@@ -322,7 +322,7 @@
         <label>Camión<input type="text" id="v-camion" placeholder="C1"></label>
         <label>Gas-Oil (litros)<input type="number" id="v-gasoil" step="0.1"></label>
       </div>
-      <div class="form-hint">💡 El 18% del chofer y el Resultado se calculan solos a partir del Total a Facturar.</div>
+      <div class="form-hint">💡 Kg. Af. se completa solo desde Kilos (mínimo 28.000, el "aforado"). El Total a Facturar y el 18% del chofer se calculan solos a partir de Kg. Af. × Tarifa — podés corregirlo a mano si el viaje es distinto (ej: bolsas).</div>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button class="btn-orange" onclick="guardarViaje()">💾 Guardar viaje</button>
         <button class="btn-ghost" onclick="cerrarFormViaje()">Cancelar</button>
@@ -919,6 +919,7 @@ function autocompletarPorEmpresa(){
   if(!document.getElementById('v-origen').value) document.getElementById('v-origen').value = t.destino || '';
   document.getElementById('v-tarifa').value = t.tarifa || '';
   document.getElementById('v-kmtabla').value = t.kmtabla || '';
+  recalcularTotalFact();
 }
 
 function autocompletarTarifa(){
@@ -934,6 +935,25 @@ function autocompletarTarifa(){
   document.getElementById('v-empresa').value = t.empresa || document.getElementById('v-empresa').value;
   document.getElementById('v-tarifa').value = t.tarifa || '';
   document.getElementById('v-kmtabla').value = t.kmtabla || '';
+  recalcularTotalFact();
+}
+
+// Kg. Af. (aforado): igual a Kilos, pero nunca menos de 28.000 (mínimo facturable)
+function autocompletarKgAf(){
+  const kilos = parseFloat(document.getElementById('v-kilos').value);
+  if(isNaN(kilos)) return;
+  const kgaf = Math.max(kilos, 28000);
+  document.getElementById('v-kgaf').value = kgaf;
+  recalcularTotalFact();
+}
+
+// Total a Facturar = (Kg. Af. / 1000) × Tarifa  →  la tarifa es "$ por tonelada"
+function recalcularTotalFact(){
+  const kgaf = parseFloat(document.getElementById('v-kgaf').value);
+  const tarifa = parseFloat(document.getElementById('v-tarifa').value);
+  if(isNaN(kgaf) || isNaN(tarifa)) return;
+  const total = (kgaf/1000) * tarifa;
+  document.getElementById('v-totalfact').value = total.toFixed(2);
 }
 
 function guardarTarifaDestino(){
