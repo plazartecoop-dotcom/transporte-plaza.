@@ -305,10 +305,12 @@
     <div class="card" id="form-viaje" style="display:none;margin-bottom:12px;">
       <div class="meta-title" style="font-size:13px;">Nuevo viaje / Editar viaje</div>
       <div class="form-grid">
-        <label>Fecha<input type="date" id="v-fecha"></label>
+        <label>Fecha<input type="date" id="v-fecha" onchange="autocompletarTarifa()"></label>
         <label>Remito<input type="text" id="v-remito" placeholder="0-160"></label>
-        <label>Empresa<input type="text" id="v-empresa" placeholder="Dovales"></label>
-        <label>Origen<input type="text" id="v-origen" placeholder="Dovales"></label>
+        <label>Empresa<input type="text" id="v-empresa" list="listaEmpresas" placeholder="Dovales" onchange="autocompletarPorEmpresa()"></label>
+        <datalist id="listaEmpresas"></datalist>
+        <label>Origen<input type="text" id="v-origen" list="listaDestinos" placeholder="Dovales" onchange="autocompletarTarifa()"></label>
+        <datalist id="listaDestinos"></datalist>
         <label>Producto<input type="text" id="v-producto" placeholder="Exp. Soja"></label>
         <label>Kilos<input type="number" id="v-kilos" step="1"></label>
         <label>Kg. Af.<input type="number" id="v-kgaf" step="1"></label>
@@ -890,6 +892,50 @@ function diaAnterior(isoDate){
   return dt.toISOString().slice(0,10);
 }
 
+// ===== AUTOCOMPLETADO: Origen del viaje trae Empresa/Tarifa/KM Tabla =====
+let tarifasDestinoCache = [];
+
+function actualizarListaDestinos(){
+  const datalist = document.getElementById('listaDestinos');
+  if(!datalist) return;
+  const destinos = [...new Set(tarifasDestinoCache.map(t=>t.destino))];
+  datalist.innerHTML = destinos.map(d=>`<option value="${d}">`).join('');
+  const datalistEmp = document.getElementById('listaEmpresas');
+  if(datalistEmp){
+    const empresas = [...new Set(tarifasDestinoCache.map(t=>t.empresa).filter(Boolean))];
+    datalistEmp.innerHTML = empresas.map(e=>`<option value="${e}">`).join('');
+  }
+}
+
+function autocompletarPorEmpresa(){
+  const empresa = document.getElementById('v-empresa').value.trim();
+  if(!empresa) return;
+  const fecha = document.getElementById('v-fecha').value || new Date().toISOString().slice(0,10);
+  const candidatas = tarifasDestinoCache
+    .filter(t => t.empresa === empresa && t.desde <= fecha)
+    .sort((a,b) => b.desde.localeCompare(a.desde));
+  if(candidatas.length === 0) return;
+  const t = candidatas[0];
+  if(!document.getElementById('v-origen').value) document.getElementById('v-origen').value = t.destino || '';
+  document.getElementById('v-tarifa').value = t.tarifa || '';
+  document.getElementById('v-kmtabla').value = t.kmtabla || '';
+}
+
+function autocompletarTarifa(){
+  const origen = document.getElementById('v-origen').value.trim();
+  if(!origen) return;
+  const fecha = document.getElementById('v-fecha').value || new Date().toISOString().slice(0,10);
+  // De todas las tarifas de ese destino, busca la más reciente cuya "desde" sea <= la fecha del viaje
+  const candidatas = tarifasDestinoCache
+    .filter(t => t.destino === origen && t.desde <= fecha)
+    .sort((a,b) => b.desde.localeCompare(a.desde));
+  if(candidatas.length === 0) return; // no hay tarifa vigente para esa fecha, no toca nada
+  const t = candidatas[0];
+  document.getElementById('v-empresa').value = t.empresa || document.getElementById('v-empresa').value;
+  document.getElementById('v-tarifa').value = t.tarifa || '';
+  document.getElementById('v-kmtabla').value = t.kmtabla || '';
+}
+
 function guardarTarifaDestino(){
   const destino = document.getElementById('t-destino').value.trim();
   const empresa = document.getElementById('t-empresa').value.trim();
@@ -964,6 +1010,8 @@ function cargarTarifasDestino(){
   if(!tbody || !window.fb) return;
   window.fb.onValue(window.fb.ref(window.fb.db, 'tarifasDestino'), (snap)=>{
     const data = snap.val();
+    tarifasDestinoCache = data ? Object.values(data) : [];
+    actualizarListaDestinos();
     tbody.innerHTML = '';
     if(!data){
       tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">No hay tarifas cargadas todavía. Tocá "+ Nueva tarifa" para empezar.</td></tr>';
