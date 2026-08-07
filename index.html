@@ -370,15 +370,14 @@
   </section>
 
   <section class="section" id="facturar">
-    <div class="meta-title">Para Facturar <span>· resumen listo para compartir</span></div>
+    <div class="meta-title">Para Facturar <span id="tituloFacturar">· resumen listo para compartir</span></div>
     <div class="invoice-card">
       <div class="invoice-head">
         <div>
-          <h2>Selección — 04 al 05 de agosto</h2>
-          <div class="period">2 viajes · totalmente editable</div>
+          <h2 id="cardTituloFacturar">Selección del mes</h2>
+          <div class="period" id="cardPeriodoFacturar">totalmente editable</div>
         </div>
         <div style="display:flex;gap:6px;">
-          <button class="btn-ghost">✏️ Editar</button>
           <button class="btn-ghost" onclick="imprimirSeccion()">🖨️ Imprimir</button>
           <button class="btn-orange" onclick="copiarSeccion('facturar')">↗ Compartir</button>
         </div>
@@ -388,15 +387,15 @@
         <thead>
           <tr><th>Fecha</th><th>Remito</th><th>Empresa</th><th>Origen</th><th>Producto</th><th class="num">Kilos</th><th class="num">Kg.Af</th><th class="num">Tarifa</th><th class="num">KM Tabla</th><th class="num">Total a Facturar</th></tr>
         </thead>
-        <tbody>
-          <tr><td>03/08</td><td>0-160</td><td>Dovales</td><td>Dovales</td><td>Exp. Soja</td><td class="num">29.920</td><td class="num">29.920</td><td class="num">14.616,30</td><td class="num">30,5</td><td class="num">437.319,70</td></tr>
-          <tr><td>04/08</td><td>15-6977</td><td>Tres Arroyos</td><td>Tres Arroyos</td><td>Afre Pellet</td><td class="num">29.280</td><td class="num">29.280</td><td class="num">38.351,85</td><td class="num">180</td><td class="num">1.122.942,20</td></tr>
+        <tbody id="tbody-facturar">
+          <tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">Cargando…</td></tr>
         </tbody>
         <tfoot>
-          <tr class="foot-row"><td colspan="9">Total a facturar</td><td class="num highlight">1.560.261,90</td></tr>
+          <tr class="foot-row"><td colspan="9">Total a facturar</td><td class="num highlight" id="totalFacturar">0,00</td></tr>
         </tfoot>
       </table>
       </div>
+      <div class="boletin-note">💡 Los viajes que aparecen acá son los que tildaste con el check en la pestaña Viajes. Destildalos ahí si querés sacarlos de esta lista.</div>
     </div>
   </section>
 
@@ -421,18 +420,16 @@
       <button class="month-pill" onclick="cambiarMes('Nov',this)">Nov</button>
       <button class="month-pill" onclick="cambiarMes('Dic',this)">Dic</button>
     </div>
-    <div class="chofer-select">
-      <div class="chofer-chip active">Gustavo Pérez</div>
-      <div class="chofer-chip">+ Otro chofer</div>
+    <div class="chofer-select" id="choferSelect">
+      <div class="chofer-chip" style="opacity:0.5;">Cargando choferes…</div>
     </div>
     <div class="invoice-card">
       <div class="invoice-head">
         <div>
-          <h2>Gustavo Pérez</h2>
-          <div class="period">Agosto 2026 · Camión 1</div>
+          <h2 id="boletinNombreChofer">—</h2>
+          <div class="period" id="boletinPeriodo">—</div>
         </div>
         <div style="display:flex;gap:6px;">
-          <button class="btn-ghost">✏️ Editar</button>
           <button class="btn-ghost" onclick="imprimirSeccion()">🖨️ Imprimir</button>
           <button class="btn-orange" onclick="copiarSeccion('boletin')">↗ Compartir</button>
         </div>
@@ -440,15 +437,11 @@
       <div style="overflow-x:auto;">
       <table class="plain">
         <thead><tr><th>Fecha</th><th>Remito</th><th>Destino</th><th class="num">18% Chofer</th></tr></thead>
-        <tbody>
-          <tr><td>01-ago</td><td>3-15580</td><td>G. Chávez</td><td class="num">178.439,00</td></tr>
-          <tr><td>03-ago</td><td>0-160</td><td>Dovales</td><td class="num">78.717,50</td></tr>
-          <tr><td>04-ago</td><td>15-6977</td><td>Tres Arroyos</td><td class="num">202.129,60</td></tr>
-          <tr><td>05-ago</td><td>106-1482</td><td>Tres Arroyos (bolsas)</td><td class="num">87.480,00</td></tr>
-          <tr><td>05-ago</td><td>15-6982</td><td>Tres Arroyos</td><td class="num">199.506,30</td></tr>
+        <tbody id="tbody-boletin">
+          <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Elegí un chofer arriba.</td></tr>
         </tbody>
         <tfoot>
-          <tr class="foot-row"><td colspan="3">5 viajes · total 18%</td><td class="num highlight">746.272,40</td></tr>
+          <tr class="foot-row"><td colspan="3" id="boletinResumen">0 viajes · total 18%</td><td class="num highlight" id="boletinTotal18">0,00</td></tr>
         </tfoot>
       </table>
       </div>
@@ -456,27 +449,26 @@
       <div class="adelantos-card">
         <div class="adelantos-head">
           <h4>💵 Adelantos del mes</h4>
-          <button class="btn-add-adelanto">+ Registrar adelanto</button>
+          <button class="btn-add-adelanto" onclick="agregarAdelanto()">+ Registrar adelanto</button>
         </div>
         <div style="overflow-x:auto;">
         <table class="plain">
-          <thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Monto</th></tr></thead>
-          <tbody>
-            <tr><td>10-ago</td><td>Adelanto en efectivo</td><td class="num">150.000,00</td></tr>
-            <tr><td>22-ago</td><td>Adelanto transferencia</td><td class="num">400.000,00</td></tr>
+          <thead><tr><th>Fecha</th><th>Concepto</th><th class="num">Monto</th><th></th></tr></thead>
+          <tbody id="tbody-adelantos">
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:14px;">Sin adelantos este mes.</td></tr>
           </tbody>
         </table>
         </div>
         <div class="saldo-box">
           <div style="width:100%;">
-            <div class="saldo-line"><span>Total 18% del mes</span><span class="val">746.272,40</span></div>
-            <div class="saldo-line"><span>Adelantos entregados</span><span class="val">− 550.000,00</span></div>
-            <div class="saldo-line total"><span>Saldo a cobrar</span><span class="val">196.272,40</span></div>
+            <div class="saldo-line"><span>Total 18% del mes</span><span class="val" id="saldoTotal18">0,00</span></div>
+            <div class="saldo-line"><span>Adelantos entregados</span><span class="val" id="saldoAdelantos">− 0,00</span></div>
+            <div class="saldo-line total"><span>Saldo a cobrar</span><span class="val" id="saldoFinal">0,00</span></div>
           </div>
         </div>
       </div>
 
-      <div class="boletin-note">💡 No muestra el total en bruto de cada viaje — solo el 18% que le corresponde a él. Si un adelanto supera lo cobrado en el mes, el excedente queda como saldo pendiente y se descuenta del mes siguiente.</div>
+      <div class="boletin-note">💡 No muestra el total en bruto de cada viaje — solo el 18% que le corresponde a él. Si un adelanto supera lo cobrado en el mes, el excedente queda como saldo negativo (a favor del chofer para el mes siguiente).</div>
     </div>
   </section>
 
@@ -512,42 +504,40 @@
     <div class="grid-2">
       <div class="card">
         <h3>🔧 Alarma Service</h3>
-        <div class="gauge-num">8.420<small>km</small></div>
-        <div class="gauge-bar"><div class="gauge-fill" style="width:84%"></div></div>
-        <div class="gauge-labels"><span>0</span><span>Meta 10.000</span></div>
-        <div class="reset-alert">⚠️ Faltan 1.580 km</div>
-        <div class="service-status">Último: <b>15-jun-2026</b></div>
-        <button class="btn-block">✅ Resetear (service hecho)</button>
+        <div class="gauge-num" id="gaugeKm">0<small>km</small></div>
+        <div class="gauge-bar"><div class="gauge-fill" id="gaugeFill" style="width:0%"></div></div>
+        <div class="gauge-labels"><span>0</span><span id="gaugeMetaLabel">Meta 10.000</span></div>
+        <div class="reset-alert" id="gaugeAlerta">—</div>
+        <div class="service-status">Último: <b id="ultimoService">— sin registrar</b></div>
+        <button class="btn-block" onclick="resetearService()">✅ Resetear (service hecho)</button>
         <div class="service-config">
-          Alertar cada <input type="text" value="10.000"> km
+          Alertar cada <input type="number" id="metaService" value="10000" style="width:80px;" onchange="guardarMetaService()"> km
         </div>
       </div>
       <div class="card">
         <h3>⛽ Consumo Estimado vs. Real</h3>
-        <div class="range-picker">Rango: <input type="text" value="01/08/2026"> a <input type="text" value="05/08/2026"></div>
+        <div class="range-picker">Rango: <input type="date" id="rangoDesde"> a <input type="date" id="rangoHasta"> <button class="btn-ghost" style="min-height:32px;padding:4px 10px;" onclick="calcularConsumo()">Calcular</button></div>
         <div class="stat-pair">
-          <div class="stat-box"><div class="lbl">Estimado</div><div class="val">414,8L</div></div>
-          <div class="stat-box"><div class="lbl">Real</div><div class="val">450L</div></div>
-          <div class="stat-box desvio"><div class="lbl">Desvío</div><div class="val">+35,2L</div></div>
+          <div class="stat-box"><div class="lbl">Estimado</div><div class="val" id="consumoEstimado">—</div></div>
+          <div class="stat-box"><div class="lbl">Real</div><div class="val" id="consumoReal">—</div></div>
+          <div class="stat-box desvio"><div class="lbl">Desvío</div><div class="val" id="consumoDesvio">—</div></div>
         </div>
         <table class="mini">
           <thead><tr><th>Fecha</th><th>Remito</th><th>Chofer</th><th class="num">Litros</th></tr></thead>
-          <tbody>
-            <tr><td>02-ago</td><td>F-8834</td><td>G.Pérez</td><td class="num">250</td></tr>
-            <tr><td>05-ago</td><td>F-8901</td><td>G.Pérez</td><td class="num">200</td></tr>
+          <tbody id="tbody-gasoil">
+            <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:10px;">Elegí un rango y tocá "Calcular".</td></tr>
           </tbody>
         </table>
-        <button class="btn-block" style="background:var(--orange);">+ Cargar factura</button>
       </div>
     </div>
     <div class="card">
       <h3>⚙️ Parámetros del cálculo</h3>
       <div class="param-row">
-        Consumo: <input type="text" value="36"> L cada 100 km
+        Consumo: <input type="number" id="paramConsumo" value="36" style="width:70px;" onchange="guardarParamsCamion()"> L cada 100 km
         <span class="hint">(ajustalo cuando cambie carga/viento)</span>
       </div>
       <div class="param-row" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);">
-        Precio actual del Gas-Oil: $ <input type="text" value="2.400" style="width:70px;"> / litro
+        Precio actual del Gas-Oil: $ <input type="number" id="paramPrecioGasoil" value="2400" style="width:90px;" onchange="guardarParamsCamion()"> / litro
         <span class="hint">(lo actualizás vos cuando cambia en el surtidor)</span>
       </div>
     </div>
@@ -570,16 +560,16 @@
       </div>
       <div class="tarifa-form" id="form-destino" style="display:none;">
         <div class="form-grid">
-          <label>Destino<input type="text" placeholder="Ej: Tres Arroyos"></label>
-          <label>Empresa<input type="text" placeholder="Ej: Molinos Tres Arroyos"></label>
-          <label>Origen<input type="text" placeholder="Ej: Tres Arroyos"></label>
-          <label>KM Tabla<input type="text" placeholder="Ej: 180"></label>
-          <label>Tarifa $<input type="text" placeholder="Ej: 38.351,85"></label>
-          <label>Vigente desde<input type="text" placeholder="dd/mm/aaaa"></label>
+          <label>Destino<input type="text" id="t-destino" placeholder="Ej: Tres Arroyos"></label>
+          <label>Empresa<input type="text" id="t-empresa" placeholder="Ej: Molinos Tres Arroyos"></label>
+          <label>Origen<input type="text" id="t-origen" placeholder="Ej: Tres Arroyos"></label>
+          <label>KM Tabla<input type="text" id="t-kmtabla" placeholder="Ej: 180"></label>
+          <label>Tarifa $<input type="number" id="t-tarifa" step="0.01" placeholder="Ej: 38351.85"></label>
+          <label>Vigente desde<input type="date" id="t-desde"></label>
         </div>
         <div class="form-actions">
           <button class="btn-ghost-dark" onclick="toggleForm('form-destino')">Cancelar</button>
-          <button class="btn-orange">Guardar tarifa</button>
+          <button class="btn-orange" onclick="guardarTarifaDestino()">Guardar tarifa</button>
         </div>
         <div class="form-hint">💡 Destino, Empresa, Origen y KM Tabla se completan una sola vez. En las próximas actualizaciones (tocando ✏️ en la fila), solo vas a tener que cargar la Tarifa nueva y la fecha Desde — el resto ya viene precargado.</div>
       </div>
@@ -587,11 +577,8 @@
       <div style="overflow-x:auto;">
       <table class="plain">
         <thead><tr><th>Destino</th><th>Empresa</th><th>Origen</th><th class="num">KM</th><th class="num">Tarifa</th><th>Desde</th><th>Hasta <span style="font-weight:400;text-transform:none;">(auto)</span></th><th></th><th class="col-accion"></th></tr></thead>
-        <tbody>
-          <tr><td>Tres Arroyos</td><td>Molinos Tres Arroyos</td><td>Tres Arroyos</td><td class="num">180</td><td class="num">38.351,85</td><td>01-jul-2026</td><td style="color:var(--muted)">— (actual)</td><td><span class="chip camion1">Vigente</span></td><td class="col-accion"><button class="btn-edit" onclick="editarTarifa(this)">✏️</button></td></tr>
-          <tr><td>Tres Arroyos</td><td>Molinos Tres Arroyos</td><td>Tres Arroyos</td><td class="num">180</td><td class="num">36.900,00</td><td>10-may-2026</td><td>30-jun-2026</td><td><span class="chip chofer">Anterior</span></td><td class="col-accion"><button class="btn-edit" onclick="editarTarifa(this)">✏️</button></td></tr>
-          <tr><td>Dovales</td><td>Dovales</td><td>Dovales</td><td class="num">30,5</td><td class="num">14.616,30</td><td>01-jun-2026</td><td style="color:var(--muted)">— (actual)</td><td><span class="chip camion1">Vigente</span></td><td class="col-accion"><button class="btn-edit" onclick="editarTarifa(this)">✏️</button></td></tr>
-          <tr><td>G. Chávez</td><td>Primoliendas</td><td>G. Chávez</td><td class="num">160</td><td class="num">35.404,56</td><td>15-may-2026</td><td style="color:var(--muted)">— (actual)</td><td><span class="chip camion1">Vigente</span></td><td class="col-accion"><button class="btn-edit" onclick="editarTarifa(this)">✏️</button></td></tr>
+        <tbody id="tbody-tarifas">
+          <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Cargando tarifas…</td></tr>
         </tbody>
       </table>
       </div>
@@ -608,20 +595,20 @@
       </div>
       <div class="tarifa-form" id="form-bolsas" style="display:none;">
         <div class="form-grid">
-          <label>Tarifa $/km<input type="text" placeholder="Ej: 2.700"></label>
-          <label>Vigente desde<input type="text" placeholder="dd/mm/aaaa"></label>
+          <label>Tarifa $/km<input type="number" id="tb-tarifa" step="0.01" placeholder="Ej: 2700"></label>
+          <label>Vigente desde<input type="date" id="tb-desde"></label>
         </div>
         <div class="form-actions">
           <button class="btn-ghost-dark" onclick="toggleForm('form-bolsas')">Cancelar</button>
-          <button class="btn-orange">Guardar tarifa</button>
+          <button class="btn-orange" onclick="guardarTarifaBolsas()">Guardar tarifa</button>
         </div>
       </div>
 
       <div style="overflow-x:auto;">
       <table class="plain">
         <thead><tr><th class="num">$ / km</th><th>Vigente desde</th><th>Hasta <span style="font-weight:400;text-transform:none;">(automático)</span></th><th></th><th class="col-accion"></th></tr></thead>
-        <tbody>
-          <tr><td class="num">2.700,00</td><td>01-ago-2026</td><td style="color:var(--muted)">— (actual)</td><td><span class="chip camion1">Vigente</span></td><td class="col-accion"><button class="btn-edit" onclick="editarTarifaBolsas(this)">✏️</button></td></tr>
+        <tbody id="tbody-bolsas">
+          <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Cargando…</td></tr>
         </tbody>
       </table>
       </div>
@@ -676,6 +663,10 @@ function mostrar(id, btn){
   document.querySelectorAll('.nav-pill').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('floatbar').style.display = (id==='viajes') ? 'flex' : 'none';
+  if(id==='facturar') cargarParaFacturar(anioActual, mesActual);
+  if(id==='boletin') cargarBoletin(anioActual, mesActual);
+  if(id==='camion') cargarPanelCamion();
+  if(id==='stats') cargarStatsReal(anioActual);
 }
 document.querySelectorAll('tbody tr').forEach(row=>{
   const cb = row.querySelector('input[type=checkbox]');
@@ -711,6 +702,7 @@ function cambiarAnio(anio, btn){
   });
   // TODO: cuando esté conectado Firebase, acá se recarga viajes/a{anio}/{mes}
   cargarViajes(anioActual, mesActual);
+  refrescarPestanaActiva();
 }
 
 function cambiarMes(mes, btn){
@@ -722,6 +714,16 @@ function cambiarMes(mes, btn){
     });
   });
   cargarViajes(anioActual, mesActual);
+  refrescarPestanaActiva();
+}
+
+function refrescarPestanaActiva(){
+  const activa = document.querySelector('.section.active');
+  if(!activa) return;
+  if(activa.id==='facturar') cargarParaFacturar(anioActual, mesActual);
+  if(activa.id==='boletin') cargarBoletin(anioActual, mesActual);
+  if(activa.id==='camion') cargarPanelCamion();
+  if(activa.id==='stats') cargarStatsReal(anioActual);
 }
 
 function nuevoAnio(){
@@ -873,36 +875,178 @@ function toggleParaFacturar(id, valor){
   window.fb.update(window.fb.ref(window.fb.db, path), { paraFacturar: valor });
 }
 
-// ===== TARIFAS: EDITAR / NUEVO (destino) =====
-function editarTarifa(btn){
-  const tr = btn.closest('tr');
-  const celdas = tr.querySelectorAll('td');
-  const form = document.getElementById('form-destino');
-  form.style.display = 'block';
-  form.querySelectorAll('input')[0].value = celdas[0].innerText; // Destino
-  form.querySelectorAll('input')[1].value = celdas[1].innerText; // Empresa
-  form.querySelectorAll('input')[2].value = celdas[2].innerText; // Origen
-  form.querySelectorAll('input')[3].value = celdas[3].innerText; // KM Tabla
-  form.querySelectorAll('input')[4].value = ''; // Tarifa nueva (vacía a propósito)
-  form.querySelectorAll('input')[5].value = ''; // Vigente desde (vacía, la carga él)
-  form.scrollIntoView({behavior:'smooth', block:'center'});
+// ===== TARIFAS POR DESTINO: guardar, leer en vivo, editar =====
+const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+function fmtFechaCorta(isoDate){
+  if(!isoDate) return '';
+  const [y,m,d] = isoDate.split('-');
+  return `${d}-${MESES_CORTOS[parseInt(m,10)-1]}-${y}`;
 }
 
-function editarTarifaBolsas(btn){
-  const tr = btn.closest('tr');
-  const celdas = tr.querySelectorAll('td');
-  const form = document.getElementById('form-bolsas');
-  form.style.display = 'block';
-  form.querySelectorAll('input')[0].value = ''; // Tarifa $/km nueva (vacía)
-  form.querySelectorAll('input')[1].value = ''; // Vigente desde
-  form.scrollIntoView({behavior:'smooth', block:'center'});
+function diaAnterior(isoDate){
+  const dt = new Date(isoDate+'T00:00:00');
+  dt.setDate(dt.getDate()-1);
+  return dt.toISOString().slice(0,10);
 }
 
-// TODO: al conectar Firebase, "Guardar tarifa" va a:
-// 1) Cerrar la vigencia de la tarifa anterior (Hasta = Desde nueva - 1 día)
-// 2) Guardar la tarifa nueva
-// 3) Si "Vigente desde" es una fecha pasada, recorrer los viajes de ese destino
-//    desde esa fecha y recalcular Tarifa/Total Fact. automáticamente
+function guardarTarifaDestino(){
+  const destino = document.getElementById('t-destino').value.trim();
+  const empresa = document.getElementById('t-empresa').value.trim();
+  const origen = document.getElementById('t-origen').value.trim();
+  const kmtabla = document.getElementById('t-kmtabla').value.trim();
+  const tarifa = document.getElementById('t-tarifa').value;
+  const desde = document.getElementById('t-desde').value;
+  if(!destino || !tarifa || !desde){
+    alert('Como mínimo cargá Destino, Tarifa y Vigente desde.');
+    return;
+  }
+  const nuevoRef = window.fb.push(window.fb.ref(window.fb.db, 'tarifasDestino'));
+  window.fb.set(nuevoRef, { destino, empresa, origen, kmtabla, tarifa, desde }).then(()=>{
+    toggleForm('form-destino');
+    ['t-destino','t-empresa','t-origen','t-kmtabla','t-tarifa','t-desde'].forEach(id=>document.getElementById(id).value='');
+    recalcularViajesPorTarifa(destino, desde, tarifa);
+  });
+}
+
+// Recalcula el campo "Tarifa" de los viajes ya cargados que coincidan con ese destino,
+// a partir de la fecha "desde" (retroactivo). El "Total a Facturar" queda marcado
+// para revisión manual, porque su fórmula depende del tipo de carga de cada viaje.
+function recalcularViajesPorTarifa(destino, desde, tarifaNueva){
+  let mesesTocados = [];
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let pendientes = meses.length;
+  meses.forEach(mes=>{
+    const path = `viajes/a${anioActual}/${mes}`;
+    window.fb.get(window.fb.ref(window.fb.db, path)).then(snap=>{
+      pendientes--;
+      if(snap.exists()){
+        const data = snap.val();
+        Object.entries(data).forEach(([id, v])=>{
+          if(v.origen === destino && v.fecha >= desde){
+            window.fb.update(window.fb.ref(window.fb.db, `${path}/${id}`), { tarifa: tarifaNueva, revisarTotal: true });
+            if(!mesesTocados.includes(mes)) mesesTocados.push(mes);
+          }
+        });
+      }
+      if(pendientes === 0){
+        if(mesesTocados.length){
+          alert(`✅ Tarifa actualizada en los viajes de ${destino} desde ${fmtFechaCorta(desde)}.\n\nSe tocaron los meses: ${mesesTocados.join(', ')}.\n\n⚠️ Importante: el "Total a Facturar" de esos viajes NO se recalculó solo — revisalo a mano en cada uno, porque depende del tipo de carga.`);
+        }
+        cargarViajes(anioActual, mesActual);
+      }
+    });
+  });
+}
+
+function editarTarifa(id){
+  window.fb.get(window.fb.ref(window.fb.db, `tarifasDestino/${id}`)).then(snap=>{
+    if(!snap.exists()) return;
+    const v = snap.val();
+    document.getElementById('t-destino').value = v.destino||'';
+    document.getElementById('t-empresa').value = v.empresa||'';
+    document.getElementById('t-origen').value = v.origen||'';
+    document.getElementById('t-kmtabla').value = v.kmtabla||'';
+    document.getElementById('t-tarifa').value = '';
+    document.getElementById('t-desde').value = '';
+    document.getElementById('form-destino').style.display = 'block';
+    document.getElementById('form-destino').scrollIntoView({behavior:'smooth', block:'center'});
+  });
+}
+
+function borrarTarifaDestino(id){
+  if(!confirm('¿Borrar esta tarifa? No se puede deshacer.')) return;
+  window.fb.remove(window.fb.ref(window.fb.db, `tarifasDestino/${id}`));
+}
+
+function cargarTarifasDestino(){
+  const tbody = document.getElementById('tbody-tarifas');
+  if(!tbody || !window.fb) return;
+  window.fb.onValue(window.fb.ref(window.fb.db, 'tarifasDestino'), (snap)=>{
+    const data = snap.val();
+    tbody.innerHTML = '';
+    if(!data){
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">No hay tarifas cargadas todavía. Tocá "+ Nueva tarifa" para empezar.</td></tr>';
+      return;
+    }
+    // Agrupa por destino para calcular la vigencia (Hasta) automáticamente
+    const grupos = {};
+    Object.entries(data).forEach(([id, v])=>{
+      if(!grupos[v.destino]) grupos[v.destino] = [];
+      grupos[v.destino].push({id, ...v});
+    });
+    let filas = [];
+    Object.values(grupos).forEach(lista=>{
+      lista.sort((a,b)=> a.desde.localeCompare(b.desde));
+      lista.forEach((item, i)=>{
+        const esVigente = i === lista.length-1;
+        const hasta = esVigente ? null : diaAnterior(lista[i+1].desde);
+        filas.push({...item, hasta, esVigente});
+      });
+    });
+    filas.sort((a,b)=> a.destino.localeCompare(b.destino) || b.desde.localeCompare(a.desde));
+    filas.forEach(f=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${f.destino}</td><td>${f.empresa||''}</td><td>${f.origen||''}</td>
+        <td class="num">${f.kmtabla||''}</td><td class="num">${fmtNum(f.tarifa)}</td>
+        <td>${fmtFechaCorta(f.desde)}</td>
+        <td ${f.esVigente?'style="color:var(--muted)"':''}>${f.esVigente ? '— (actual)' : fmtFechaCorta(f.hasta)}</td>
+        <td><span class="chip ${f.esVigente?'camion1':'chofer'}">${f.esVigente?'Vigente':'Anterior'}</span></td>
+        <td class="col-accion"><button class="btn-edit" onclick="editarTarifa('${f.id}')">✏️</button> <button class="btn-edit" onclick="borrarTarifaDestino('${f.id}')">🗑️</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+// ===== TARIFA BOLSAS ($/km): guardar, leer en vivo, editar =====
+function guardarTarifaBolsas(){
+  const tarifa = document.getElementById('tb-tarifa').value;
+  const desde = document.getElementById('tb-desde').value;
+  if(!tarifa || !desde){
+    alert('Cargá la Tarifa $/km y la fecha Vigente desde.');
+    return;
+  }
+  const nuevoRef = window.fb.push(window.fb.ref(window.fb.db, 'tarifasBolsas'));
+  window.fb.set(nuevoRef, { tarifa, desde }).then(()=>{
+    toggleForm('form-bolsas');
+    document.getElementById('tb-tarifa').value = '';
+    document.getElementById('tb-desde').value = '';
+  });
+}
+
+function borrarTarifaBolsas(id){
+  if(!confirm('¿Borrar esta tarifa? No se puede deshacer.')) return;
+  window.fb.remove(window.fb.ref(window.fb.db, `tarifasBolsas/${id}`));
+}
+
+function cargarTarifasBolsas(){
+  const tbody = document.getElementById('tbody-bolsas');
+  if(!tbody || !window.fb) return;
+  window.fb.onValue(window.fb.ref(window.fb.db, 'tarifasBolsas'), (snap)=>{
+    const data = snap.val();
+    tbody.innerHTML = '';
+    if(!data){
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No hay tarifa de bolsas cargada todavía.</td></tr>';
+      return;
+    }
+    let lista = Object.entries(data).map(([id,v])=>({id, ...v}));
+    lista.sort((a,b)=> a.desde.localeCompare(b.desde));
+    lista.forEach((item, i)=>{
+      const esVigente = i === lista.length-1;
+      const hasta = esVigente ? null : diaAnterior(lista[i+1].desde);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="num">${fmtNum(item.tarifa)}</td><td>${fmtFechaCorta(item.desde)}</td>
+        <td ${esVigente?'style="color:var(--muted)"':''}>${esVigente ? '— (actual)' : fmtFechaCorta(hasta)}</td>
+        <td><span class="chip ${esVigente?'camion1':'chofer'}">${esVigente?'Vigente':'Anterior'}</span></td>
+        <td class="col-accion"><button class="btn-edit" onclick="borrarTarifaBolsas('${item.id}')">🗑️</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+}
 
 // ===== ESTADÍSTICAS: gráfico comparativo =====
 // Datos de ejemplo (mock) — cuando esté Firebase, esto se arma sumando
@@ -1003,10 +1147,280 @@ function mostrarToast(msg){
   window._toastTimer = setTimeout(()=>toast.classList.remove('show'), 2200);
 }
 
+function sanitizeKey(str){
+  return String(str||'').trim().replace(/[.#$\[\]\/\s]+/g, '_') || 'sin_nombre';
+}
+
+// ===== PARA FACTURAR (lee viajes reales tildados) =====
+function cargarParaFacturar(anio, mes){
+  const tbody = document.getElementById('tbody-facturar');
+  if(!tbody || !window.fb) return;
+  document.getElementById('cardTituloFacturar').innerText = `Selección — ${mes} ${anio}`;
+  window.fb.onValue(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`), (snap)=>{
+    const data = snap.val();
+    tbody.innerHTML = '';
+    let total = 0, n = 0;
+    if(data){
+      Object.values(data).forEach(v=>{
+        if(!v.paraFacturar) return;
+        n++;
+        const tf = parseFloat(v.totalFact)||0;
+        total += tf;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    if(n===0) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">No hay viajes tildados "Para Facturar" este mes.</td></tr>';
+    document.getElementById('cardPeriodoFacturar').innerText = `${n} viaje${n===1?'':'s'} · totalmente editable`;
+    document.getElementById('totalFacturar').innerText = fmtNum(total);
+  });
+}
+
+// ===== BOLETÍN CHOFER + ADELANTOS =====
+let choferActual = null;
+
+function cargarBoletin(anio, mes){
+  if(!window.fb) return;
+  window.fb.get(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`)).then(snap=>{
+    const data = snap.val() || {};
+    const choferes = [...new Set(Object.values(data).map(v=>v.chofer).filter(Boolean))];
+    if(!choferActual || !choferes.includes(choferActual)){
+      choferActual = choferes[0] || null;
+    }
+    const cont = document.getElementById('choferSelect');
+    cont.innerHTML = '';
+    choferes.forEach(ch=>{
+      const chip = document.createElement('div');
+      chip.className = 'chofer-chip' + (ch===choferActual ? ' active' : '');
+      chip.innerText = ch;
+      chip.onclick = ()=>{ choferActual = ch; cargarBoletin(anioActual, mesActual); };
+      cont.appendChild(chip);
+    });
+    const otro = document.createElement('div');
+    otro.className = 'chofer-chip';
+    otro.innerText = '+ Otro chofer';
+    otro.onclick = ()=>{
+      const nombre = prompt('Nombre del chofer (tal como querés que aparezca):');
+      if(nombre && nombre.trim()){ choferActual = nombre.trim(); cargarBoletin(anioActual, mesActual); }
+    };
+    cont.appendChild(otro);
+
+    if(!choferActual){
+      document.getElementById('boletinNombreChofer').innerText = '—';
+      document.getElementById('boletinPeriodo').innerText = 'No hay choferes con viajes cargados este mes';
+      document.getElementById('tbody-boletin').innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Sin datos.</td></tr>';
+      document.getElementById('boletinTotal18').innerText = '0,00';
+      document.getElementById('saldoTotal18').innerText = '0,00';
+      return;
+    }
+
+    document.getElementById('boletinNombreChofer').innerText = choferActual;
+    document.getElementById('boletinPeriodo').innerText = `${mes} ${anio}`;
+
+    const tbody = document.getElementById('tbody-boletin');
+    tbody.innerHTML = '';
+    let total18 = 0, n = 0;
+    Object.values(data).forEach(v=>{
+      if(v.chofer !== choferActual) return;
+      n++;
+      const tf = parseFloat(v.totalFact)||0;
+      const porc = tf*0.18;
+      total18 += porc;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.origen||''}</td><td class="num">${fmtNum(porc)}</td>`;
+      tbody.appendChild(tr);
+    });
+    if(n===0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Sin viajes este mes.</td></tr>';
+    document.getElementById('boletinResumen').innerText = `${n} viaje${n===1?'':'s'} · total 18%`;
+    document.getElementById('boletinTotal18').innerText = fmtNum(total18);
+    document.getElementById('saldoTotal18').innerText = fmtNum(total18);
+
+    cargarAdelantos(anio, mes, total18);
+  });
+}
+
+function cargarAdelantos(anio, mes, total18){
+  const key = sanitizeKey(choferActual);
+  const path = `adelantos/a${anio}/${mes}/${key}`;
+  window.fb.onValue(window.fb.ref(window.fb.db, path), (snap)=>{
+    const data = snap.val();
+    const tbody = document.getElementById('tbody-adelantos');
+    tbody.innerHTML = '';
+    let totalAdelantos = 0;
+    if(data){
+      Object.entries(data).forEach(([id, a])=>{
+        totalAdelantos += parseFloat(a.monto)||0;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${a.fecha||''}</td><td>${a.concepto||''}</td><td class="num">${fmtNum(a.monto)}</td><td><button class="btn-edit" onclick="borrarAdelanto('${id}')">🗑️</button></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    if(!data) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:14px;">Sin adelantos este mes.</td></tr>';
+    document.getElementById('saldoAdelantos').innerText = '− ' + fmtNum(totalAdelantos);
+    const saldo = total18 - totalAdelantos;
+    document.getElementById('saldoFinal').innerText = (saldo<0?'− ':'') + fmtNum(Math.abs(saldo));
+  });
+}
+
+function agregarAdelanto(){
+  if(!choferActual){ alert('Elegí un chofer primero.'); return; }
+  const monto = prompt('Monto del adelanto ($):');
+  if(!monto || isNaN(parseFloat(monto))) return;
+  const concepto = prompt('Concepto (ej: Efectivo, Transferencia):') || 'Adelanto';
+  const fecha = new Date().toISOString().slice(0,10);
+  const key = sanitizeKey(choferActual);
+  const nuevoRef = window.fb.push(window.fb.ref(window.fb.db, `adelantos/a${anioActual}/${mesActual}/${key}`));
+  window.fb.set(nuevoRef, { fecha, concepto, monto: parseFloat(monto) });
+}
+
+function borrarAdelanto(id){
+  if(!confirm('¿Borrar este adelanto?')) return;
+  const key = sanitizeKey(choferActual);
+  window.fb.remove(window.fb.ref(window.fb.db, `adelantos/a${anioActual}/${mesActual}/${key}/${id}`));
+}
+
+// ===== PANEL CAMIÓN =====
+const CAMION_ACTUAL = 'C1';
+
+function cargarPanelCamion(){
+  if(!window.fb) return;
+  window.fb.get(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`)).then(snap=>{
+    const p = snap.val() || { consumo:36, precioGasoil:2400, metaService:10000, kmUltimoService:0, fechaUltimoService:null };
+    document.getElementById('paramConsumo').value = p.consumo;
+    document.getElementById('paramPrecioGasoil').value = p.precioGasoil;
+    document.getElementById('metaService').value = p.metaService;
+    document.getElementById('ultimoService').innerText = p.fechaUltimoService ? fmtFechaCorta(p.fechaUltimoService) : '— sin registrar';
+    // Suma los KM reales del camión en todo el año actual, desde la fecha del último service
+    sumarKmCamion(CAMION_ACTUAL, p.fechaUltimoService).then(kmAcumulado=>{
+      document.getElementById('gaugeKm').innerHTML = fmtNum(kmAcumulado).split(',')[0] + '<small>km</small>';
+      const pct = Math.min(100, (kmAcumulado / (p.metaService||10000)) * 100);
+      document.getElementById('gaugeFill').style.width = pct + '%';
+      document.getElementById('gaugeMetaLabel').innerText = 'Meta ' + fmtNum(p.metaService).split(',')[0];
+      const faltan = (p.metaService||10000) - kmAcumulado;
+      const alerta = document.getElementById('gaugeAlerta');
+      if(faltan <= 0){ alerta.innerText = '🔴 ¡Service vencido! Pasaste la meta.'; alerta.style.color = '#C1503A'; }
+      else if(faltan <= 1000){ alerta.innerText = `⚠️ Faltan ${fmtNum(faltan).split(',')[0]} km`; alerta.style.color = '#F0A63E'; }
+      else { alerta.innerText = `✅ Faltan ${fmtNum(faltan).split(',')[0]} km`; alerta.style.color = 'var(--green)'; }
+    });
+  });
+}
+
+function sumarKmCamion(camion, fechaDesde){
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const promesas = meses.map(mes => window.fb.get(window.fb.ref(window.fb.db, `viajes/a${anioActual}/${mes}`)));
+  return Promise.all(promesas).then(snaps=>{
+    let total = 0;
+    snaps.forEach(snap=>{
+      if(!snap.exists()) return;
+      Object.values(snap.val()).forEach(v=>{
+        if(v.camion !== camion) return;
+        if(fechaDesde && v.fecha < fechaDesde) return;
+        total += parseFloat(v.kmreal)||0;
+      });
+    });
+    return total;
+  });
+}
+
+function guardarParamsCamion(){
+  const consumo = document.getElementById('paramConsumo').value;
+  const precioGasoil = document.getElementById('paramPrecioGasoil').value;
+  window.fb.update(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), { consumo, precioGasoil });
+}
+
+function guardarMetaService(){
+  const metaService = document.getElementById('metaService').value;
+  window.fb.update(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), { metaService }).then(()=>cargarPanelCamion());
+}
+
+function resetearService(){
+  if(!confirm('¿Confirmás que se hizo el service? Esto reinicia el contador de km en 0.')) return;
+  const hoy = new Date().toISOString().slice(0,10);
+  window.fb.update(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), { fechaUltimoService: hoy }).then(()=>cargarPanelCamion());
+}
+
+function calcularConsumo(){
+  const desde = document.getElementById('rangoDesde').value;
+  const hasta = document.getElementById('rangoHasta').value;
+  if(!desde || !hasta){ alert('Elegí las dos fechas del rango.'); return; }
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const promesas = meses.map(mes => window.fb.get(window.fb.ref(window.fb.db, `viajes/a${anioActual}/${mes}`)));
+  Promise.all(promesas).then(snaps=>{
+    const consumo = parseFloat(document.getElementById('paramConsumo').value)||36;
+    let kmTotal = 0, litrosReales = 0;
+    const filas = [];
+    snaps.forEach(snap=>{
+      if(!snap.exists()) return;
+      Object.values(snap.val()).forEach(v=>{
+        if(v.camion !== CAMION_ACTUAL) return;
+        if(!v.fecha || v.fecha < desde || v.fecha > hasta) return;
+        kmTotal += parseFloat(v.kmreal)||0;
+        const litros = parseFloat(v.gasoil)||0;
+        litrosReales += litros;
+        if(litros>0) filas.push(v);
+      });
+    });
+    const estimado = kmTotal * (consumo/100);
+    const desvio = litrosReales - estimado;
+    document.getElementById('consumoEstimado').innerText = fmtNum(estimado).split(',')[0] + 'L';
+    document.getElementById('consumoReal').innerText = fmtNum(litrosReales).split(',')[0] + 'L';
+    document.getElementById('consumoDesvio').innerText = (desvio>=0?'+':'') + fmtNum(desvio).split(',')[0] + 'L';
+    const tbody = document.getElementById('tbody-gasoil');
+    tbody.innerHTML = '';
+    if(filas.length===0){
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:10px;">Sin cargas de combustible en ese rango.</td></tr>';
+    } else {
+      filas.forEach(v=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${v.fecha}</td><td>${v.remito||''}</td><td>${v.chofer||''}</td><td class="num">${v.gasoil}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  });
+}
+
+// ===== ESTADÍSTICAS con datos reales =====
+function cargarStatsReal(anio){
+  if(!window.fb || !chartStats) return;
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const promesas = meses.map(mes => window.fb.get(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`)));
+  window.fb.get(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`)).then(psnap=>{
+    const precioGasoil = (psnap.val() && psnap.val().precioGasoil) ? parseFloat(psnap.val().precioGasoil) : 2400;
+    Promise.all(promesas).then(snaps=>{
+      const combustible = [], tarifas = [], ganancias = [];
+      let sumCombustible=0, sumTarifas=0, sumGanancias=0;
+      snaps.forEach(snap=>{
+        let facturado=0, litros=0;
+        if(snap.exists()){
+          Object.values(snap.val()).forEach(v=>{
+            facturado += parseFloat(v.totalFact)||0;
+            litros += parseFloat(v.gasoil)||0;
+          });
+        }
+        const costoComb = litros*precioGasoil;
+        const ganancia = facturado - (facturado*0.18) - costoComb;
+        combustible.push(costoComb); tarifas.push(facturado); ganancias.push(ganancia);
+        sumCombustible+=costoComb; sumTarifas+=facturado; sumGanancias+=ganancia;
+      });
+      chartStats.data.labels = meses;
+      chartStats.data.datasets[0].data = combustible;
+      chartStats.data.datasets[1].data = tarifas;
+      chartStats.data.datasets[2].data = ganancias;
+      chartStats.update();
+      document.querySelectorAll('#stats .stat-box .val')[0].innerText = '$ ' + fmtNum(sumCombustible).split(',')[0];
+      document.querySelectorAll('#stats .stat-box .val')[1].innerText = '$ ' + fmtNum(sumTarifas).split(',')[0];
+      document.querySelectorAll('#stats .stat-box .val')[2].innerText = '$ ' + fmtNum(sumGanancias).split(',')[0];
+    });
+  });
+}
+
 // Carga inicial de Viajes: espera a que el módulo de Firebase esté listo
 function esperarFirebaseYcargar(intentos){
   if(window.fb){
     cargarViajes(anioActual, mesActual);
+    cargarTarifasDestino();
+    cargarTarifasBolsas();
   } else if(intentos > 0){
     setTimeout(()=>esperarFirebaseYcargar(intentos-1), 200);
   } else {
