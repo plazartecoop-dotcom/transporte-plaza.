@@ -706,7 +706,13 @@ function mostrar(id, btn){
   if(id==='boletin') cargarBoletin(anioActual, mesActual);
   if(id==='choferes') cargarChoferes();
   if(id==='camion') cargarPanelCamion();
-  if(id==='stats') cargarStatsReal(anioActual);
+  if(id==='stats'){
+    cargarStatsReal(anioActual);
+    // El gráfico se creó con la pestaña oculta (tamaño cero) — al mostrarla, hay que
+    // "reacomodarlo" para que dibuje bien. Un pequeño delay para que el navegador
+    // termine de mostrar la pestaña antes de medir el tamaño real.
+    setTimeout(()=>{ if(chartStats) chartStats.resize(); }, 50);
+  }
 }
 document.querySelectorAll('tbody tr').forEach(row=>{
   const cb = row.querySelector('input[type=checkbox]');
@@ -841,11 +847,23 @@ function abrirFormViaje(){
     document.getElementById(id).value = '';
   });
   document.getElementById('v-bolsas').checked = false;
-  document.getElementById('v-consumo').value = consumoActualCache;
+  document.getElementById('v-consumo').value = consumoActualCache; // valor provisorio, se confirma abajo
   document.getElementById('v-kilos').closest('label').style.opacity = '1';
   document.getElementById('v-kgaf').closest('label').style.opacity = '1';
   document.getElementById('form-viaje').style.display = 'block';
   document.getElementById('form-viaje').scrollIntoView({behavior:'smooth', block:'center'});
+  // Confirma el consumo pactado buscándolo fresco en Firebase (por si la app se acaba
+  // de abrir y todavía no bajó el dato real a la memoria)
+  if(window.fb){
+    window.fb.get(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`)).then(snap=>{
+      if(snap.exists() && snap.val().consumo){
+        consumoActualCache = parseFloat(snap.val().consumo);
+        if(document.getElementById('v-kmreal').value === ''){ // si todavía no tocó nada, actualiza el campo
+          document.getElementById('v-consumo').value = consumoActualCache;
+        }
+      }
+    });
+  }
 }
 
 function cerrarFormViaje(){
@@ -872,19 +890,51 @@ function editarViaje(id){
     document.getElementById('v-chofer').value = v.chofer||'';
     document.getElementById('v-camion').value = v.camion||'';
     document.getElementById('v-gasoil').value = v.gasoil||'';
-    document.getElementById('v-consumo').value = v.consumo || consumoActualCache;
-    // Si el viaje viejo tiene KM Real pero nunca se le cargó Gas-Oil, lo completa ahora (sin pisar un valor ya guardado)
-    if(!v.gasoil && v.kmreal){
-      const estimado = (parseFloat(v.kmreal) * parseFloat(document.getElementById('v-consumo').value) / 100).toFixed(1);
-      document.getElementById('v-gasoil').value = estimado;
-    }
+    document.getElementById('v-consumo').value = v.consumo||'';
     document.getElementById('v-bolsas').checked = (v.tipo === 'bolsas');
     document.getElementById('v-kilos').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
     document.getElementById('v-kgaf').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
     viajeEditandoId = id;
     document.getElementById('form-viaje').style.display = 'block';
     document.getElementById('form-viaje').scrollIntoView({behavior:'smooth', block:'center'});
+
+    // Completa lo que le falte a este viaje viejo, buscando el dato FRESCO en Firebase
+    // (no de la memoria/caché) para que sea correcto sin importar cuándo se abrió la app.
+    completarDatosFaltantes(v);
   });
+}
+
+// Busca en Firebase (no en caché) el Consumo pactado y el Camión habitual del chofer,
+// y completa solo lo que el viaje no tenía guardado. Nunca pisa un dato que ya existía.
+function completarDatosFaltantes(v){
+  const necesitaConsumo = !v.consumo;
+  const necesitaCamion = !v.camion && v.chofer;
+
+  if(necesitaConsumo){
+    window.fb.get(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`)).then(snap=>{
+      const consumo = (snap.exists() && snap.val().consumo) ? snap.val().consumo : consumoActualCache;
+      document.getElementById('v-consumo').value = consumo;
+      // Si además le faltaba el Gas-Oil y tiene KM Real, lo completa ahora con el consumo recién traído
+      if(!v.gasoil && v.kmreal){
+        const estimado = (parseFloat(v.kmreal) * parseFloat(consumo) / 100).toFixed(1);
+        document.getElementById('v-gasoil').value = estimado;
+      }
+    });
+  } else if(!v.gasoil && v.kmreal){
+    const estimado = (parseFloat(v.kmreal) * parseFloat(v.consumo) / 100).toFixed(1);
+    document.getElementById('v-gasoil').value = estimado;
+  }
+
+  if(necesitaCamion){
+    window.fb.get(window.fb.ref(window.fb.db, 'choferes')).then(snap=>{
+      if(!snap.exists()) return;
+      const lista = Object.values(snap.val());
+      const chofer = lista.find(c => c.nombre === v.chofer);
+      if(chofer && chofer.camion){
+        document.getElementById('v-camion').value = chofer.camion;
+      }
+    });
+  }
 }
 
 function guardarViaje(){
@@ -969,20 +1019,40 @@ function actualizarListaDestinos(){
   }
 }
 
+// Devuelve las tarifas de destino: usa la caché si ya llegó, si no, va a buscarla
+// fresca a Firebase (por si se usa el autocompletado antes de que termine de bajar).
+function obtenerTarifasDestino(){
+  if(tarifasDestinoCache.length > 0) return Promise.resolve(tarifasDestinoCache);
+  return window.fb.get(window.fb.ref(window.fb.db, 'tarifasDestino')).then(snap=>{
+    const data = snap.val();
+    return data ? Object.values(data) : [];
+  });
+}
+
+function obtenerTarifasBolsas(){
+  if(tarifasBolsasCache.length > 0) return Promise.resolve(tarifasBolsasCache);
+  return window.fb.get(window.fb.ref(window.fb.db, 'tarifasBolsas')).then(snap=>{
+    const data = snap.val();
+    return data ? Object.entries(data).map(([id,v])=>({id, ...v})) : [];
+  });
+}
+
 function autocompletarPorEmpresa(){
   if(document.getElementById('v-bolsas').checked){ autocompletarTarifaBolsas(); return; }
   const empresa = document.getElementById('v-empresa').value.trim();
   if(!empresa) return;
   const fecha = document.getElementById('v-fecha').value || new Date().toISOString().slice(0,10);
-  const candidatas = tarifasDestinoCache
-    .filter(t => t.empresa === empresa && t.desde <= fecha)
-    .sort((a,b) => b.desde.localeCompare(a.desde));
-  if(candidatas.length === 0) return;
-  const t = candidatas[0];
-  if(!document.getElementById('v-origen').value) document.getElementById('v-origen').value = t.destino || '';
-  document.getElementById('v-tarifa').value = t.tarifa || '';
-  document.getElementById('v-kmtabla').value = t.kmtabla || '';
-  recalcularTotalFact();
+  obtenerTarifasDestino().then(lista=>{
+    const candidatas = lista
+      .filter(t => t.empresa === empresa && t.desde <= fecha)
+      .sort((a,b) => b.desde.localeCompare(a.desde));
+    if(candidatas.length === 0) return;
+    const t = candidatas[0];
+    if(!document.getElementById('v-origen').value) document.getElementById('v-origen').value = t.destino || '';
+    document.getElementById('v-tarifa').value = t.tarifa || '';
+    document.getElementById('v-kmtabla').value = t.kmtabla || '';
+    recalcularTotalFact();
+  });
 }
 
 function autocompletarTarifa(){
@@ -990,16 +1060,18 @@ function autocompletarTarifa(){
   const origen = document.getElementById('v-origen').value.trim();
   if(!origen) return;
   const fecha = document.getElementById('v-fecha').value || new Date().toISOString().slice(0,10);
-  // De todas las tarifas de ese destino, busca la más reciente cuya "desde" sea <= la fecha del viaje
-  const candidatas = tarifasDestinoCache
-    .filter(t => t.destino === origen && t.desde <= fecha)
-    .sort((a,b) => b.desde.localeCompare(a.desde));
-  if(candidatas.length === 0) return; // no hay tarifa vigente para esa fecha, no toca nada
-  const t = candidatas[0];
-  document.getElementById('v-empresa').value = t.empresa || document.getElementById('v-empresa').value;
-  document.getElementById('v-tarifa').value = t.tarifa || '';
-  document.getElementById('v-kmtabla').value = t.kmtabla || '';
-  recalcularTotalFact();
+  obtenerTarifasDestino().then(lista=>{
+    // De todas las tarifas de ese destino, busca la más reciente cuya "desde" sea <= la fecha del viaje
+    const candidatas = lista
+      .filter(t => t.destino === origen && t.desde <= fecha)
+      .sort((a,b) => b.desde.localeCompare(a.desde));
+    if(candidatas.length === 0) return; // no hay tarifa vigente para esa fecha, no toca nada
+    const t = candidatas[0];
+    document.getElementById('v-empresa').value = t.empresa || document.getElementById('v-empresa').value;
+    document.getElementById('v-tarifa').value = t.tarifa || '';
+    document.getElementById('v-kmtabla').value = t.kmtabla || '';
+    recalcularTotalFact();
+  });
 }
 
 // Kg. Af. (aforado): igual a Kilos, pero nunca menos de 28.000 (mínimo facturable)
@@ -1052,12 +1124,14 @@ function cambiarTipoCarga(){
 // Trae la tarifa de Bolsas ($/km) vigente para la fecha del viaje
 function autocompletarTarifaBolsas(){
   const fecha = document.getElementById('v-fecha').value || new Date().toISOString().slice(0,10);
-  const candidatas = tarifasBolsasCache
-    .filter(t => t.desde <= fecha)
-    .sort((a,b) => b.desde.localeCompare(a.desde));
-  if(candidatas.length === 0) return;
-  document.getElementById('v-tarifa').value = candidatas[0].tarifa || '';
-  recalcularTotalFact();
+  obtenerTarifasBolsas().then(lista=>{
+    const candidatas = lista
+      .filter(t => t.desde <= fecha)
+      .sort((a,b) => b.desde.localeCompare(a.desde));
+    if(candidatas.length === 0) return;
+    document.getElementById('v-tarifa').value = candidatas[0].tarifa || '';
+    recalcularTotalFact();
+  });
 }
 
 function guardarTarifaDestino(){
@@ -1274,7 +1348,18 @@ function recalcularGasoil(){
 
 function autocompletarCamion(){
   const nombre = document.getElementById('v-chofer').value.trim();
-  const chofer = choferesCache.find(c => c.nombre === nombre);
+  if(choferesCache.length > 0){
+    aplicarCamionDeChofer(nombre, choferesCache);
+  } else {
+    window.fb.get(window.fb.ref(window.fb.db, 'choferes')).then(snap=>{
+      const lista = snap.exists() ? Object.values(snap.val()) : [];
+      aplicarCamionDeChofer(nombre, lista);
+    });
+  }
+}
+
+function aplicarCamionDeChofer(nombre, lista){
+  const chofer = lista.find(c => c.nombre === nombre);
   if(chofer && chofer.camion){
     document.getElementById('v-camion').value = chofer.camion;
   }
@@ -1711,6 +1796,17 @@ let aniosStatsSuscriptos = new Set();
 
 function cargarStatsReal(anio){
   iniciarStatsEnVivo(anio);
+  // Además de la escucha en vivo, hace una lectura fresca directa cada vez que
+  // se abre la pestaña — así el número es correcto SIEMPRE, sin depender de si
+  // la escucha en vivo ya terminó de bajar los datos.
+  if(!window.fb) return;
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const promesas = meses.map(mes => window.fb.get(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`)));
+  Promise.all(promesas).then(snaps=>{
+    if(!datosViajesPorMesStats[anio]) datosViajesPorMesStats[anio] = {};
+    snaps.forEach((snap, i)=>{ datosViajesPorMesStats[anio][meses[i]] = snap.val(); });
+    if(anio === anioActual) recalcularYPintarStats(anio, meses);
+  });
 }
 
 function iniciarStatsEnVivo(anio){
