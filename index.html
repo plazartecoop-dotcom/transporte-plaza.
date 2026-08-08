@@ -306,20 +306,21 @@
     <div class="card" id="form-viaje" style="display:none;margin-bottom:12px;">
       <div class="meta-title" style="font-size:13px;">Nuevo viaje / Editar viaje</div>
       <div class="form-grid">
-        <label>Fecha<input type="date" id="v-fecha" onchange="autocompletarTarifa()"></label>
+        <label>Fecha<input type="date" id="v-fecha" onchange="cambiarTipoCarga()"></label>
         <label>Remito<input type="text" id="v-remito" placeholder="0-160"></label>
         <label>Empresa<input type="text" id="v-empresa" list="listaEmpresas" placeholder="Dovales" onchange="autocompletarPorEmpresa()"></label>
         <datalist id="listaEmpresas"></datalist>
         <label>Origen<input type="text" id="v-origen" list="listaDestinos" placeholder="Dovales" onchange="autocompletarTarifa()"></label>
         <datalist id="listaDestinos"></datalist>
         <label>Producto<input type="text" id="v-producto" placeholder="Exp. Soja"></label>
+        <label style="flex-direction:row;align-items:center;gap:6px;padding-top:16px;"><input type="checkbox" id="v-bolsas" style="width:16px;height:16px;min-height:auto;" onchange="cambiarTipoCarga()"> Bolsas</label>
         <label>Kilos<input type="number" id="v-kilos" step="1" oninput="autocompletarKgAf()"></label>
         <label>Kg. Af.<input type="number" id="v-kgaf" step="1" oninput="recalcularTotalFact()"></label>
         <label>Tarifa<input type="number" id="v-tarifa" step="0.01" oninput="recalcularTotalFact()"></label>
         <label>KM Tabla<input type="number" id="v-kmtabla" step="0.1"></label>
         <label>Total a Facturar<input type="number" id="v-totalfact" step="0.01"></label>
-        <label>KM Real<input type="number" id="v-kmreal" step="0.1"></label>
-        <label>Chofer<input type="text" id="v-chofer" list="listaChoferes" placeholder="G. Pérez"></label>
+        <label>KM Real<input type="number" id="v-kmreal" step="0.1" oninput="autocompletarGasoil()"></label>
+        <label>Chofer<input type="text" id="v-chofer" list="listaChoferes" placeholder="G. Pérez" onchange="autocompletarCamion()"></label>
         <datalist id="listaChoferes"></datalist>
         <label>Camión<input type="text" id="v-camion" placeholder="C1"></label>
         <label>Gas-Oil (litros)<input type="number" id="v-gasoil" step="0.1"></label>
@@ -841,6 +842,9 @@ function abrirFormViaje(){
   ['v-fecha','v-remito','v-empresa','v-origen','v-producto','v-kilos','v-kgaf','v-tarifa','v-kmtabla','v-totalfact','v-kmreal','v-chofer','v-camion','v-gasoil'].forEach(id=>{
     document.getElementById(id).value = '';
   });
+  document.getElementById('v-bolsas').checked = false;
+  document.getElementById('v-kilos').closest('label').style.opacity = '1';
+  document.getElementById('v-kgaf').closest('label').style.opacity = '1';
   document.getElementById('form-viaje').style.display = 'block';
   document.getElementById('form-viaje').scrollIntoView({behavior:'smooth', block:'center'});
 }
@@ -869,6 +873,9 @@ function editarViaje(id){
     document.getElementById('v-chofer').value = v.chofer||'';
     document.getElementById('v-camion').value = v.camion||'';
     document.getElementById('v-gasoil').value = v.gasoil||'';
+    document.getElementById('v-bolsas').checked = (v.tipo === 'bolsas');
+    document.getElementById('v-kilos').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
+    document.getElementById('v-kgaf').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
     viajeEditandoId = id;
     document.getElementById('form-viaje').style.display = 'block';
     document.getElementById('form-viaje').scrollIntoView({behavior:'smooth', block:'center'});
@@ -891,6 +898,7 @@ function guardarViaje(){
     chofer: document.getElementById('v-chofer').value,
     camion: document.getElementById('v-camion').value,
     gasoil: document.getElementById('v-gasoil').value,
+    tipo: document.getElementById('v-bolsas').checked ? 'bolsas' : 'granel',
     paraFacturar: false,
   };
   if(!viaje.fecha || !viaje.empresa){
@@ -940,6 +948,8 @@ function diaAnterior(isoDate){
 
 // ===== AUTOCOMPLETADO: Origen del viaje trae Empresa/Tarifa/KM Tabla =====
 let tarifasDestinoCache = [];
+let tarifasBolsasCache = [];
+let consumoActualCache = 36; // L cada 100km, valor por defecto hasta que cargue el real
 
 function actualizarListaDestinos(){
   const datalist = document.getElementById('listaDestinos');
@@ -954,6 +964,7 @@ function actualizarListaDestinos(){
 }
 
 function autocompletarPorEmpresa(){
+  if(document.getElementById('v-bolsas').checked){ autocompletarTarifaBolsas(); return; }
   const empresa = document.getElementById('v-empresa').value.trim();
   if(!empresa) return;
   const fecha = document.getElementById('v-fecha').value || new Date().toISOString().slice(0,10);
@@ -969,6 +980,7 @@ function autocompletarPorEmpresa(){
 }
 
 function autocompletarTarifa(){
+  if(document.getElementById('v-bolsas').checked){ autocompletarTarifaBolsas(); return; }
   const origen = document.getElementById('v-origen').value.trim();
   if(!origen) return;
   const fecha = document.getElementById('v-fecha').value || new Date().toISOString().slice(0,10);
@@ -993,13 +1005,53 @@ function autocompletarKgAf(){
   recalcularTotalFact();
 }
 
-// Total a Facturar = (Kg. Af. / 1000) × Tarifa  →  la tarifa es "$ por tonelada"
+// Total a Facturar:
+//  - Granel: (Kg. Af. / 1000) × Tarifa  →  la tarifa es "$ por tonelada"
+//  - Bolsas: Tarifa ($/km) × KM Tabla  →  no depende de la cantidad de bolsas
 function recalcularTotalFact(){
-  const kgaf = parseFloat(document.getElementById('v-kgaf').value);
+  const esBolsas = document.getElementById('v-bolsas').checked;
   const tarifa = parseFloat(document.getElementById('v-tarifa').value);
-  if(isNaN(kgaf) || isNaN(tarifa)) return;
-  const total = (kgaf/1000) * tarifa;
+  if(isNaN(tarifa)) return;
+  let total;
+  if(esBolsas){
+    const kmtabla = parseFloat(document.getElementById('v-kmtabla').value);
+    if(isNaN(kmtabla)) return;
+    total = tarifa * kmtabla;
+  } else {
+    const kgaf = parseFloat(document.getElementById('v-kgaf').value);
+    if(isNaN(kgaf)) return;
+    total = (kgaf/1000) * tarifa;
+  }
   document.getElementById('v-totalfact').value = total.toFixed(2);
+}
+
+// Al cambiar Granel/Bolsas: ajusta qué campos hacen falta y trae la tarifa correcta
+function cambiarTipoCarga(){
+  const esBolsas = document.getElementById('v-bolsas').checked;
+  const kilosLbl = document.getElementById('v-kilos').closest('label');
+  const kgafLbl = document.getElementById('v-kgaf').closest('label');
+  if(esBolsas){
+    kilosLbl.style.opacity = '0.4';
+    kgafLbl.style.opacity = '0.4';
+    document.getElementById('v-kilos').value = '';
+    document.getElementById('v-kgaf').value = '';
+    autocompletarTarifaBolsas();
+  } else {
+    kilosLbl.style.opacity = '1';
+    kgafLbl.style.opacity = '1';
+    autocompletarTarifa();
+  }
+}
+
+// Trae la tarifa de Bolsas ($/km) vigente para la fecha del viaje
+function autocompletarTarifaBolsas(){
+  const fecha = document.getElementById('v-fecha').value || new Date().toISOString().slice(0,10);
+  const candidatas = tarifasBolsasCache
+    .filter(t => t.desde <= fecha)
+    .sort((a,b) => b.desde.localeCompare(a.desde));
+  if(candidatas.length === 0) return;
+  document.getElementById('v-tarifa').value = candidatas[0].tarifa || '';
+  recalcularTotalFact();
 }
 
 function guardarTarifaDestino(){
@@ -1192,6 +1244,28 @@ function cargarChoferes(){
 }
 
 
+// Estima el Gas-Oil como KM Real × Consumo/100. Solo si el campo está vacío
+// o si el valor que hay coincide con una estimación anterior (para no pisar un dato real ya cargado).
+function autocompletarGasoil(){
+  const kmreal = parseFloat(document.getElementById('v-kmreal').value);
+  if(isNaN(kmreal)) return;
+  const campoGasoil = document.getElementById('v-gasoil');
+  const estimacionAnterior = campoGasoil.dataset.estimado;
+  const valorActual = campoGasoil.value;
+  if(valorActual !== '' && valorActual !== estimacionAnterior) return; // ya tiene un valor real cargado a mano, no lo tocamos
+  const estimado = (kmreal * consumoActualCache / 100).toFixed(1);
+  campoGasoil.value = estimado;
+  campoGasoil.dataset.estimado = estimado;
+}
+
+function autocompletarCamion(){
+  const nombre = document.getElementById('v-chofer').value.trim();
+  const chofer = choferesCache.find(c => c.nombre === nombre);
+  if(chofer && chofer.camion){
+    document.getElementById('v-camion').value = chofer.camion;
+  }
+}
+
 function guardarTarifaBolsas(){
   const tarifa = document.getElementById('tb-tarifa').value;
   const desde = document.getElementById('tb-desde').value;
@@ -1217,6 +1291,7 @@ function cargarTarifasBolsas(){
   if(!tbody || !window.fb) return;
   window.fb.onValue(window.fb.ref(window.fb.db, 'tarifasBolsas'), (snap)=>{
     const data = snap.val();
+    tarifasBolsasCache = data ? Object.entries(data).map(([id,v])=>({id, ...v})) : [];
     tbody.innerHTML = '';
     if(!data){
       tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No hay tarifa de bolsas cargada todavía.</td></tr>';
@@ -1471,6 +1546,7 @@ function cargarPanelCamion(){
   if(!window.fb) return;
   window.fb.get(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`)).then(snap=>{
     const p = snap.val() || { consumo:36, precioGasoil:2400, metaService:10000, kmUltimoService:0, fechaUltimoService:null };
+    consumoActualCache = parseFloat(p.consumo) || consumoActualCache;
     document.getElementById('paramConsumo').value = p.consumo;
     document.getElementById('paramPrecioGasoil').value = p.precioGasoil;
     document.getElementById('metaService').value = p.metaService;
@@ -1511,6 +1587,7 @@ function sumarKmCamion(camion, fechaDesde){
 function guardarParamsCamion(){
   const consumo = document.getElementById('paramConsumo').value;
   const precioGasoil = document.getElementById('paramPrecioGasoil').value;
+  consumoActualCache = parseFloat(consumo) || consumoActualCache;
   window.fb.update(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), { consumo, precioGasoil });
 }
 
@@ -1566,38 +1643,68 @@ function calcularConsumo(){
 }
 
 // ===== ESTADÍSTICAS con datos reales =====
+// ===== ESTADÍSTICAS EN VIVO =====
+// A diferencia del resto de la app (que carga datos al entrar a la pestaña),
+// acá dejamos "escuchas" activas de Firebase para que el gráfico se actualice
+// solo apenas se guarda/edita/borra un viaje, sin importar en qué pestaña estés.
+let datosViajesPorMesStats = {};   // { anio: { mes: data } }
+let precioGasoilStatsCache = 2400;
+let aniosStatsSuscriptos = new Set();
+
 function cargarStatsReal(anio){
-  if(!window.fb || !chartStats) return;
+  iniciarStatsEnVivo(anio);
+}
+
+function iniciarStatsEnVivo(anio){
+  if(!window.fb || !chartStats){ setTimeout(()=>iniciarStatsEnVivo(anio), 300); return; }
   const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const promesas = meses.map(mes => window.fb.get(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`)));
-  window.fb.get(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`)).then(psnap=>{
-    const precioGasoil = (psnap.val() && psnap.val().precioGasoil) ? parseFloat(psnap.val().precioGasoil) : 2400;
-    Promise.all(promesas).then(snaps=>{
-      const combustible = [], tarifas = [], ganancias = [];
-      let sumCombustible=0, sumTarifas=0, sumGanancias=0;
-      snaps.forEach(snap=>{
-        let facturado=0, litros=0;
-        if(snap.exists()){
-          Object.values(snap.val()).forEach(v=>{
-            facturado += parseFloat(v.totalFact)||0;
-            litros += parseFloat(v.gasoil)||0;
-          });
-        }
-        const costoComb = litros*precioGasoil;
-        const ganancia = facturado - (facturado*0.18) - costoComb;
-        combustible.push(costoComb); tarifas.push(facturado); ganancias.push(ganancia);
-        sumCombustible+=costoComb; sumTarifas+=facturado; sumGanancias+=ganancia;
-      });
-      chartStats.data.labels = meses;
-      chartStats.data.datasets[0].data = combustible;
-      chartStats.data.datasets[1].data = tarifas;
-      chartStats.data.datasets[2].data = ganancias;
-      chartStats.update();
-      document.getElementById('statCombustibleAnio').innerText = '$ ' + fmtNum(sumCombustible).split(',')[0];
-      document.getElementById('statFacturadoAnio').innerText = '$ ' + fmtNum(sumTarifas).split(',')[0];
-      document.getElementById('statGananciaAnio').innerText = '$ ' + fmtNum(sumGanancias).split(',')[0];
+  if(aniosStatsSuscriptos.has(anio)){
+    recalcularYPintarStats(anio, meses);
+    return;
+  }
+  aniosStatsSuscriptos.add(anio);
+  if(!datosViajesPorMesStats[anio]) datosViajesPorMesStats[anio] = {};
+
+  window.fb.onValue(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), (snap)=>{
+    precioGasoilStatsCache = (snap.val() && snap.val().precioGasoil) ? parseFloat(snap.val().precioGasoil) : 2400;
+    recalcularYPintarStats(anioActual, meses);
+  });
+
+  meses.forEach(mes=>{
+    window.fb.onValue(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`), (snap)=>{
+      datosViajesPorMesStats[anio][mes] = snap.val();
+      if(anio === anioActual) recalcularYPintarStats(anioActual, meses); // solo repinta si es el año que se está mostrando ahora
     });
   });
+}
+
+function recalcularYPintarStats(anio, meses){
+  if(!chartStats) return;
+  const datosAnio = datosViajesPorMesStats[anio] || {};
+  const combustible = [], tarifas = [], ganancias = [];
+  let sumCombustible=0, sumTarifas=0, sumGanancias=0;
+  meses.forEach(mes=>{
+    const data = datosAnio[mes];
+    let facturado=0, litros=0;
+    if(data){
+      Object.values(data).forEach(v=>{
+        facturado += parseFloat(v.totalFact)||0;
+        litros += parseFloat(v.gasoil)||0;
+      });
+    }
+    const costoComb = litros*precioGasoilStatsCache;
+    const ganancia = facturado - (facturado*0.18) - costoComb;
+    combustible.push(costoComb); tarifas.push(facturado); ganancias.push(ganancia);
+    sumCombustible+=costoComb; sumTarifas+=facturado; sumGanancias+=ganancia;
+  });
+  chartStats.data.labels = meses;
+  chartStats.data.datasets[0].data = combustible;
+  chartStats.data.datasets[1].data = tarifas;
+  chartStats.data.datasets[2].data = ganancias;
+  chartStats.update();
+  document.getElementById('statCombustibleAnio').innerText = '$ ' + fmtNum(sumCombustible).split(',')[0];
+  document.getElementById('statFacturadoAnio').innerText = '$ ' + fmtNum(sumTarifas).split(',')[0];
+  document.getElementById('statGananciaAnio').innerText = '$ ' + fmtNum(sumGanancias).split(',')[0];
 }
 
 // Carga inicial de Viajes: espera a que el módulo de Firebase esté listo
@@ -1608,6 +1715,7 @@ function esperarFirebaseYcargar(intentos){
     cargarTarifasBolsas();
     cargarPanelCamion();
     cargarChoferes();
+    iniciarStatsEnVivo(anioActual);
   } else if(intentos > 0){
     setTimeout(()=>esperarFirebaseYcargar(intentos-1), 200);
   } else {
