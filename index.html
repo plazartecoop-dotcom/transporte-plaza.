@@ -322,7 +322,8 @@
         <label>KM Real<input type="number" id="v-kmreal" step="0.1" oninput="autocompletarGasoil()"></label>
         <label>Chofer<input type="text" id="v-chofer" list="listaChoferes" placeholder="G. Pérez" onchange="autocompletarCamion()"></label>
         <datalist id="listaChoferes"></datalist>
-        <label>Camión<input type="text" id="v-camion" placeholder="C1"></label>
+        <label>Camión<input type="text" id="v-camion" list="listaCamiones" placeholder="C1"></label>
+        <datalist id="listaCamiones"></datalist>
         <label>Consumo (L/100km)<input type="number" id="v-consumo" step="0.1" oninput="recalcularGasoil()"></label>
         <label>Gas-Oil (litros)<input type="number" id="v-gasoil" step="0.1"></label>
       </div>
@@ -536,9 +537,8 @@
       <button class="btn-accion" onclick="imprimirSeccion()">🖨️ Imprimir</button>
       <button class="btn-accion" onclick="copiarSeccion('camion')">📋 Copiar</button>
     </div>
-    <div class="camion-tabs">
-      <div class="camion-tab active" style="pointer-events:none;">Camión 1</div>
-      <div class="camion-tab" style="opacity:0.4;pointer-events:none;cursor:default;" title="Todavía no disponible">+ Camión 2 (próximamente)</div>
+    <div class="camion-tabs" id="camionTabs">
+      <div class="camion-tab" style="opacity:0.5;">Cargando…</div>
     </div>
     <div class="grid-2">
       <div class="card">
@@ -728,9 +728,6 @@ function irAParaFacturar(){
 document.querySelectorAll('.chofer-chip').forEach(c=>{
   c.addEventListener('click', ()=>{document.querySelectorAll('.chofer-chip').forEach(x=>x.classList.remove('active'));c.classList.add('active');});
 });
-document.querySelectorAll('.camion-tab').forEach(c=>{
-  c.addEventListener('click', ()=>{document.querySelectorAll('.camion-tab').forEach(x=>x.classList.remove('active'));c.classList.add('active');});
-});
 updateSel();
 
 // ===== NAVEGACIÓN AÑO / MES =====
@@ -844,6 +841,7 @@ function abrirFormViaje(){
     document.getElementById(id).value = '';
   });
   document.getElementById('v-bolsas').checked = false;
+  document.getElementById('v-consumo').value = consumoActualCache;
   document.getElementById('v-kilos').closest('label').style.opacity = '1';
   document.getElementById('v-kgaf').closest('label').style.opacity = '1';
   document.getElementById('form-viaje').style.display = 'block';
@@ -874,7 +872,12 @@ function editarViaje(id){
     document.getElementById('v-chofer').value = v.chofer||'';
     document.getElementById('v-camion').value = v.camion||'';
     document.getElementById('v-gasoil').value = v.gasoil||'';
-    document.getElementById('v-consumo').value = v.consumo||'';
+    document.getElementById('v-consumo').value = v.consumo || consumoActualCache;
+    // Si el viaje viejo tiene KM Real pero nunca se le cargó Gas-Oil, lo completa ahora (sin pisar un valor ya guardado)
+    if(!v.gasoil && v.kmreal){
+      const estimado = (parseFloat(v.kmreal) * parseFloat(document.getElementById('v-consumo').value) / 100).toFixed(1);
+      document.getElementById('v-gasoil').value = estimado;
+    }
     document.getElementById('v-bolsas').checked = (v.tipo === 'bolsas');
     document.getElementById('v-kilos').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
     document.getElementById('v-kgaf').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
@@ -1551,7 +1554,51 @@ function borrarAdelanto(id){
 }
 
 // ===== PANEL CAMIÓN =====
-const CAMION_ACTUAL = 'C1';
+let CAMION_ACTUAL = 'C1';
+let camionesCache = [];
+
+function cargarCamiones(){
+  if(!window.fb) return;
+  window.fb.onValue(window.fb.ref(window.fb.db, 'camiones'), (snap)=>{
+    const data = snap.val();
+    camionesCache = data ? Object.entries(data).map(([id,v])=>({id, ...v})) : [];
+    if(camionesCache.length === 0){
+      // primera vez: crea "C1" solo para no arrancar de cero
+      const nuevoRef = window.fb.push(window.fb.ref(window.fb.db, 'camiones'));
+      window.fb.set(nuevoRef, { nombre: 'C1' });
+      return;
+    }
+    if(!camionesCache.find(c=>c.nombre===CAMION_ACTUAL)) CAMION_ACTUAL = camionesCache[0].nombre;
+
+    // Pestañitas de camiones
+    const cont = document.getElementById('camionTabs');
+    cont.innerHTML = '';
+    camionesCache.forEach(c=>{
+      const tab = document.createElement('div');
+      tab.className = 'camion-tab' + (c.nombre===CAMION_ACTUAL ? ' active' : '');
+      tab.innerText = c.nombre;
+      tab.onclick = ()=>{ CAMION_ACTUAL = c.nombre; cargarPanelCamion(); };
+      cont.appendChild(tab);
+    });
+    const btnNuevo = document.createElement('div');
+    btnNuevo.className = 'camion-tab';
+    btnNuevo.style.borderStyle = 'dashed';
+    btnNuevo.innerText = '+ Agregar camión';
+    btnNuevo.onclick = ()=>{
+      const nombre = prompt('Nombre o patente del camión nuevo (ej: C2, AB123CD):');
+      if(!nombre || !nombre.trim()) return;
+      const nuevoRef = window.fb.push(window.fb.ref(window.fb.db, 'camiones'));
+      window.fb.set(nuevoRef, { nombre: nombre.trim() }).then(()=>{ CAMION_ACTUAL = nombre.trim(); });
+    };
+    cont.appendChild(btnNuevo);
+
+    // Datalist para autocompletar el campo Camión en el formulario de viaje
+    const datalist = document.getElementById('listaCamiones');
+    if(datalist) datalist.innerHTML = camionesCache.map(c=>`<option value="${c.nombre}">`).join('');
+
+    cargarPanelCamion();
+  });
+}
 
 function cargarPanelCamion(){
   if(!window.fb) return;
@@ -1724,7 +1771,7 @@ function esperarFirebaseYcargar(intentos){
     cargarViajes(anioActual, mesActual);
     cargarTarifasDestino();
     cargarTarifasBolsas();
-    cargarPanelCamion();
+    cargarCamiones();
     cargarChoferes();
     iniciarStatsEnVivo(anioActual);
   } else if(intentos > 0){
