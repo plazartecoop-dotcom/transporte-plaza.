@@ -6,7 +6,7 @@
 <title>Transporte Plaza</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js';"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, set, get, update, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
@@ -672,6 +672,9 @@
         <button class="stats-filtro" data-serie="combustible" onclick="filtrarStats('combustible',this)">⛽ Combustible</button>
         <button class="stats-filtro" data-serie="tarifas" onclick="filtrarStats('tarifas',this)">💲 Tarifas</button>
         <button class="stats-filtro" data-serie="ganancias" onclick="filtrarStats('ganancias',this)">📈 Ganancias</button>
+      </div>
+      <div id="avisoChartStats" style="display:none;background:#FFF3E0;border:1px solid #F0A63E;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:11px;color:#8A5A00;">
+        ⚠️ El gráfico no pudo cargar (puede ser un bloqueo de la red donde estás conectado). Los números de las cajitas de abajo sí son correctos igual.
       </div>
       <div style="position:relative;height:280px;margin-top:12px;">
         <canvas id="chartStats"></canvas>
@@ -1833,7 +1836,6 @@ function iniciarStatsEnVivo(anio){
 }
 
 function recalcularYPintarStats(anio, meses){
-  if(!chartStats) return;
   const datosAnio = datosViajesPorMesStats[anio] || {};
   const combustible = [], tarifas = [], ganancias = [];
   let sumCombustible=0, sumTarifas=0, sumGanancias=0;
@@ -1851,14 +1853,21 @@ function recalcularYPintarStats(anio, meses){
     combustible.push(costoComb); tarifas.push(facturado); ganancias.push(ganancia);
     sumCombustible+=costoComb; sumTarifas+=facturado; sumGanancias+=ganancia;
   });
+  // Los totales de las 3 cajitas se actualizan siempre, aunque el gráfico no haya podido cargar
+  document.getElementById('statCombustibleAnio').innerText = '$ ' + fmtNum(sumCombustible).split(',')[0];
+  document.getElementById('statFacturadoAnio').innerText = '$ ' + fmtNum(sumTarifas).split(',')[0];
+  document.getElementById('statGananciaAnio').innerText = '$ ' + fmtNum(sumGanancias).split(',')[0];
+
+  if(!chartStats){
+    const aviso = document.getElementById('avisoChartStats');
+    if(aviso) aviso.style.display = 'block';
+    return;
+  }
   chartStats.data.labels = meses;
   chartStats.data.datasets[0].data = combustible;
   chartStats.data.datasets[1].data = tarifas;
   chartStats.data.datasets[2].data = ganancias;
   chartStats.update();
-  document.getElementById('statCombustibleAnio').innerText = '$ ' + fmtNum(sumCombustible).split(',')[0];
-  document.getElementById('statFacturadoAnio').innerText = '$ ' + fmtNum(sumTarifas).split(',')[0];
-  document.getElementById('statGananciaAnio').innerText = '$ ' + fmtNum(sumGanancias).split(',')[0];
 }
 
 // Carga inicial de Viajes: espera a que el módulo de Firebase esté listo
