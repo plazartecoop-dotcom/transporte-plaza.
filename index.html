@@ -323,6 +323,7 @@
         <label>Chofer<input type="text" id="v-chofer" list="listaChoferes" placeholder="G. Pérez" onchange="autocompletarCamion()"></label>
         <datalist id="listaChoferes"></datalist>
         <label>Camión<input type="text" id="v-camion" placeholder="C1"></label>
+        <label>Consumo (L/100km)<input type="number" id="v-consumo" step="0.1" oninput="recalcularGasoil()"></label>
         <label>Gas-Oil (litros)<input type="number" id="v-gasoil" step="0.1"></label>
       </div>
       <div class="form-hint">💡 Kg. Af. se completa solo desde Kilos (mínimo 28.000, el "aforado"). El Total a Facturar y el 18% del chofer se calculan solos a partir de Kg. Af. × Tarifa — podés corregirlo a mano si el viaje es distinto (ej: bolsas).</div>
@@ -839,7 +840,7 @@ let viajeEditandoId = null;
 
 function abrirFormViaje(){
   viajeEditandoId = null;
-  ['v-fecha','v-remito','v-empresa','v-origen','v-producto','v-kilos','v-kgaf','v-tarifa','v-kmtabla','v-totalfact','v-kmreal','v-chofer','v-camion','v-gasoil'].forEach(id=>{
+  ['v-fecha','v-remito','v-empresa','v-origen','v-producto','v-kilos','v-kgaf','v-tarifa','v-kmtabla','v-totalfact','v-kmreal','v-chofer','v-camion','v-gasoil','v-consumo'].forEach(id=>{
     document.getElementById(id).value = '';
   });
   document.getElementById('v-bolsas').checked = false;
@@ -873,6 +874,7 @@ function editarViaje(id){
     document.getElementById('v-chofer').value = v.chofer||'';
     document.getElementById('v-camion').value = v.camion||'';
     document.getElementById('v-gasoil').value = v.gasoil||'';
+    document.getElementById('v-consumo').value = v.consumo||'';
     document.getElementById('v-bolsas').checked = (v.tipo === 'bolsas');
     document.getElementById('v-kilos').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
     document.getElementById('v-kgaf').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
@@ -898,6 +900,7 @@ function guardarViaje(){
     chofer: document.getElementById('v-chofer').value,
     camion: document.getElementById('v-camion').value,
     gasoil: document.getElementById('v-gasoil').value,
+    consumo: document.getElementById('v-consumo').value,
     tipo: document.getElementById('v-bolsas').checked ? 'bolsas' : 'granel',
     paraFacturar: false,
   };
@@ -1244,18 +1247,26 @@ function cargarChoferes(){
 }
 
 
-// Estima el Gas-Oil como KM Real × Consumo/100. Solo si el campo está vacío
-// o si el valor que hay coincide con una estimación anterior (para no pisar un dato real ya cargado).
+// Cuando cargás KM Real por primera vez (viaje nuevo), precarga el Consumo pactado
+// actual y calcula el Gas-Oil. Si ya tenía un Consumo cargado (viaje viejo que estás
+// editando), NO lo pisa — solo recalcula el Gas-Oil con el Consumo que ya está puesto.
 function autocompletarGasoil(){
   const kmreal = parseFloat(document.getElementById('v-kmreal').value);
   if(isNaN(kmreal)) return;
-  const campoGasoil = document.getElementById('v-gasoil');
-  const estimacionAnterior = campoGasoil.dataset.estimado;
-  const valorActual = campoGasoil.value;
-  if(valorActual !== '' && valorActual !== estimacionAnterior) return; // ya tiene un valor real cargado a mano, no lo tocamos
-  const estimado = (kmreal * consumoActualCache / 100).toFixed(1);
-  campoGasoil.value = estimado;
-  campoGasoil.dataset.estimado = estimado;
+  const campoConsumo = document.getElementById('v-consumo');
+  if(campoConsumo.value === ''){
+    campoConsumo.value = consumoActualCache;
+  }
+  recalcularGasoil();
+}
+
+// Gas-Oil = KM Real × Consumo / 100. Se recalcula cada vez que tocás Consumo a mano
+// (por ejemplo, "hoy hizo más viento" y le subís 1-2 litros cada 100km).
+function recalcularGasoil(){
+  const kmreal = parseFloat(document.getElementById('v-kmreal').value);
+  const consumo = parseFloat(document.getElementById('v-consumo').value);
+  if(isNaN(kmreal) || isNaN(consumo)) return;
+  document.getElementById('v-gasoil').value = (kmreal * consumo / 100).toFixed(1);
 }
 
 function autocompletarCamion(){
