@@ -188,7 +188,8 @@
   .service-status b{color:var(--amber-deep);}
   .btn-block{width:100%;margin-top:8px;background:var(--asphalt);color:#fff;border:none;padding:7px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-weight:600;font-size:10px;cursor:pointer;}
   .reset-alert{background:var(--red-soft);border:1px solid #E3C4B8;color:#7A3A24;padding:6px 9px;border-radius:7px;font-size:9.5px;margin-top:9px;display:flex;align-items:center;gap:5px;}
-  .stat-pair{display:flex;gap:8px;margin-bottom:10px;}
+  .stat-pair{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .stat-pair .stat-box{flex:1 1 130px;}
   .stat-box{flex:1;background:#FAF9F6;border:1px solid var(--line);border-radius:7px;padding:8px;text-align:center;}
   .stat-box .lbl{font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.3px;}
   .stat-box .val{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14.5px;margin-top:2px;}
@@ -688,9 +689,16 @@
     </div>
 
     <div class="stat-pair" style="margin-top:12px;">
-      <div class="stat-box"><div class="lbl">Combustible (año)</div><div class="val" id="statCombustibleAnio">$ 0</div></div>
       <div class="stat-box"><div class="lbl">Facturado (año)</div><div class="val" id="statFacturadoAnio">$ 0</div></div>
       <div class="stat-box"><div class="lbl">Ganancia neta (año)</div><div class="val" id="statGananciaAnio" style="color:var(--green);">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Combustible (año)</div><div class="val" id="statCombustibleAnio">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Chofer 18% (año)</div><div class="val" id="statChoferAnio">$ 0</div></div>
+    </div>
+    <div class="stat-pair" style="margin-top:6px;">
+      <div class="stat-box"><div class="lbl">Facturado (mes)</div><div class="val" id="statFacturadoMes">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Ganancia neta (mes)</div><div class="val" id="statGananciaMes" style="color:var(--green);">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Combustible (mes)</div><div class="val" id="statCombustibleMes">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Chofer 18% (mes)</div><div class="val" id="statChoferMes">$ 0</div></div>
     </div>
   </section>
 
@@ -1002,6 +1010,13 @@ function fmtFechaCorta(isoDate){
   if(!isoDate) return '';
   const [y,m,d] = isoDate.split('-');
   return `${d}-${MESES_CORTOS[parseInt(m,10)-1]}-${y}`;
+}
+
+// Fecha bien corta (dd/mm) para no saturar el eje del gráfico cuando hay muchos viajes
+function fmtFechaGrafico(isoDate){
+  if(!isoDate) return '';
+  const [y,m,d] = isoDate.split('-');
+  return `${d}/${m}`;
 }
 
 function diaAnterior(isoDate){
@@ -1856,58 +1871,92 @@ function iniciarStatsEnVivo(anio){
 
 function recalcularYPintarStats(anio, meses){
   const datosAnio = datosViajesPorMesStats[anio] || {};
-  const combustible = [], tarifas = [], ganancias = [], chofer18 = [];
-  let sumCombustible=0, sumTarifas=0, sumGanancias=0;
+
+  // Junta TODOS los viajes reales del año en una sola lista, y los ordena por fecha.
+  // Cada viaje va a ser un punto en el gráfico — no hay meses vacíos ni relleno en cero.
+  let viajesOrdenados = [];
   meses.forEach(mes=>{
     const data = datosAnio[mes];
-    let facturado=0, litros=0;
-    if(data){
-      Object.values(data).forEach(v=>{
-        facturado += parseFloat(v.totalFact)||0;
-        litros += parseFloat(v.gasoil)||0;
-      });
-    }
+    if(data) Object.values(data).forEach(v=>{ if(v.fecha) viajesOrdenados.push(v); });
+  });
+  viajesOrdenados.sort((a,b)=> a.fecha.localeCompare(b.fecha));
+
+  const etiquetas = [], combustible = [], tarifas = [], ganancias = [], chofer18 = [];
+  let sumCombustible=0, sumTarifas=0, sumGanancias=0, sumChofer=0;
+  viajesOrdenados.forEach(v=>{
+    const facturado = parseFloat(v.totalFact)||0;
+    const litros = parseFloat(v.gasoil)||0;
     const costoComb = litros*precioGasoilStatsCache;
     const costoChofer = facturado*0.18;
     const ganancia = facturado - costoChofer - costoComb;
+    etiquetas.push(fmtFechaGrafico(v.fecha));
     combustible.push(costoComb); tarifas.push(facturado); ganancias.push(ganancia); chofer18.push(costoChofer);
-    sumCombustible+=costoComb; sumTarifas+=facturado; sumGanancias+=ganancia;
+    sumCombustible+=costoComb; sumTarifas+=facturado; sumGanancias+=ganancia; sumChofer+=costoChofer;
   });
-  // Los totales de las 3 cajitas se actualizan siempre, aunque el gráfico no haya podido cargar
+
+  // Los totales de las 4 cajitas de arriba (AÑO) se actualizan siempre, aunque el gráfico no haya podido cargar
   document.getElementById('statCombustibleAnio').innerText = '$ ' + fmtNum(sumCombustible).split(',')[0];
   document.getElementById('statFacturadoAnio').innerText = '$ ' + fmtNum(sumTarifas).split(',')[0];
   document.getElementById('statGananciaAnio').innerText = '$ ' + fmtNum(sumGanancias).split(',')[0];
+  document.getElementById('statChoferAnio').innerText = '$ ' + fmtNum(sumChofer).split(',')[0];
+
+  // Y las 4 cajitas de abajo (MES ACTUAL), solo con los viajes de ese mes
+  const dataMesActual = datosAnio[mesActual] || {};
+  let facturadoMes=0, litrosMes=0;
+  Object.values(dataMesActual).forEach(v=>{
+    facturadoMes += parseFloat(v.totalFact)||0;
+    litrosMes += parseFloat(v.gasoil)||0;
+  });
+  const combustibleMes = litrosMes*precioGasoilStatsCache;
+  const choferMes = facturadoMes*0.18;
+  const gananciaMes = facturadoMes - choferMes - combustibleMes;
+  document.getElementById('statCombustibleMes').innerText = '$ ' + fmtNum(combustibleMes).split(',')[0];
+  document.getElementById('statFacturadoMes').innerText = '$ ' + fmtNum(facturadoMes).split(',')[0];
+  document.getElementById('statGananciaMes').innerText = '$ ' + fmtNum(gananciaMes).split(',')[0];
+  document.getElementById('statChoferMes').innerText = '$ ' + fmtNum(choferMes).split(',')[0];
 
   if(!chartStats){
     const aviso = document.getElementById('avisoChartStats');
     if(aviso) aviso.style.display = 'block';
     return;
   }
-  // Si es el año en curso, no muestra los meses futuros (todavía sin datos) — así el
-  // gráfico no "cae a cero" al final, y no queda vacío hasta que llega ese mes.
-  const hoy = new Date();
-  const corte = (anio == hoy.getFullYear()) ? (hoy.getMonth()+1) : 12;
 
-  let dCombustible = combustible.slice(0, corte);
-  let dTarifas = tarifas.slice(0, corte);
-  let dGanancias = ganancias.slice(0, corte);
-  let dChofer = chofer18.slice(0, corte);
+  let dCombustible = combustible, dTarifas = tarifas, dGanancias = ganancias, dChofer = chofer18;
 
   if(modoStats === 'porcentaje'){
-    // Cada línea pasa a ser "% de lo Facturado ese mes" (Facturado siempre queda en 100%)
+    // Cada línea pasa a ser "% de lo Facturado en ESE viaje" (Facturado siempre queda en 100%)
     dCombustible = dCombustible.map((v,i)=> dTarifas[i]>0 ? +(v/dTarifas[i]*100).toFixed(1) : 0);
     dGanancias = dGanancias.map((v,i)=> dTarifas[i]>0 ? +(v/dTarifas[i]*100).toFixed(1) : 0);
     dChofer = dChofer.map((v,i)=> dTarifas[i]>0 ? +(v/dTarifas[i]*100).toFixed(1) : 0);
     dTarifas = dTarifas.map(v => v>0 ? 100 : 0);
   }
 
-  chartStats.data.labels = meses.slice(0, corte);
-  chartStats.data.datasets[0].data = dCombustible;
-  chartStats.data.datasets[1].data = dTarifas;
-  chartStats.data.datasets[2].data = dGanancias;
-  chartStats.data.datasets[3].data = dChofer;
+  // Reserva el resto del año (hasta Diciembre) como espacio vacío en el eje —
+  // así se ve cuánto queda por delante, y la línea se va a ir estirando sola
+  // hacia la derecha a medida que carguemos más viajes, sin caer a cero.
+  const mesesTodos = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const mesDeReferencia = viajesOrdenados.length ? mesesDelUltimoViaje(viajesOrdenados) : mesActual;
+  const idxDesde = mesesTodos.indexOf(mesDeReferencia) + 1;
+  const mesesRestantes = mesesTodos.slice(idxDesde);
+  const etiquetasFinal = [...etiquetas, ...mesesRestantes];
+  const relleno = mesesRestantes.map(()=>null);
+
+  chartStats.data.labels = etiquetasFinal;
+  chartStats.data.datasets[0].data = [...dCombustible, ...relleno];
+  chartStats.data.datasets[1].data = [...dTarifas, ...relleno];
+  chartStats.data.datasets[2].data = [...dGanancias, ...relleno];
+  chartStats.data.datasets[3].data = [...dChofer, ...relleno];
+  chartStats.data.datasets.forEach(ds => ds.spanGaps = false);
   chartStats.update();
 }
+
+// Devuelve el mes (nombre corto) del último viaje cargado en la lista ordenada
+function mesesDelUltimoViaje(viajesOrdenados){
+  const ultimaFecha = viajesOrdenados[viajesOrdenados.length-1].fecha;
+  const mesNum = parseInt(ultimaFecha.split('-')[1], 10) - 1;
+  return ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][mesNum];
+}
+
 
 // Carga inicial de Viajes: espera a que el módulo de Firebase esté listo
 function esperarFirebaseYcargar(intentos){
