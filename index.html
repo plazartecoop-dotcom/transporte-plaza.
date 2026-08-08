@@ -1429,9 +1429,9 @@ function initChartStats(){
     data: {
       labels: mesesDelAnio,
       datasets: [
-        { label:'Combustible', data: new Array(12).fill(0), borderColor:'#C1503A', backgroundColor:'#C1503A', tension:0.3, pointRadius:3 },
-        { label:'Tarifas (facturado)', data: new Array(12).fill(0), borderColor:'#F0A63E', backgroundColor:'#F0A63E', tension:0.3, pointRadius:3 },
-        { label:'Ganancia neta', data: new Array(12).fill(0), borderColor:'#4C8767', backgroundColor:'#4C8767', tension:0.3, pointRadius:3 },
+        { label:'Combustible', data: new Array(12).fill(0), borderColor:'#C1503A', backgroundColor:'#C1503A', tension:0, pointRadius:3 },
+        { label:'Tarifas (facturado)', data: new Array(12).fill(0), borderColor:'#F0A63E', backgroundColor:'#F0A63E', tension:0, pointRadius:3 },
+        { label:'Ganancia neta', data: new Array(12).fill(0), borderColor:'#4C8767', backgroundColor:'#4C8767', tension:0, pointRadius:3 },
       ]
     },
     options: {
@@ -1863,10 +1863,14 @@ function recalcularYPintarStats(anio, meses){
     if(aviso) aviso.style.display = 'block';
     return;
   }
-  chartStats.data.labels = meses;
-  chartStats.data.datasets[0].data = combustible;
-  chartStats.data.datasets[1].data = tarifas;
-  chartStats.data.datasets[2].data = ganancias;
+  // Si es el año en curso, no muestra los meses futuros (todavía sin datos) — así el
+  // gráfico no "cae a cero" al final, y no queda vacío hasta que llega ese mes.
+  const hoy = new Date();
+  const corte = (anio == hoy.getFullYear()) ? (hoy.getMonth()+1) : 12;
+  chartStats.data.labels = meses.slice(0, corte);
+  chartStats.data.datasets[0].data = combustible.slice(0, corte);
+  chartStats.data.datasets[1].data = tarifas.slice(0, corte);
+  chartStats.data.datasets[2].data = ganancias.slice(0, corte);
   chartStats.update();
 }
 
