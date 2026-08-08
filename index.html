@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -671,7 +672,12 @@
         <button class="stats-filtro active" data-serie="todos" onclick="filtrarStats('todos',this)">Todos</button>
         <button class="stats-filtro" data-serie="combustible" onclick="filtrarStats('combustible',this)">⛽ Combustible</button>
         <button class="stats-filtro" data-serie="tarifas" onclick="filtrarStats('tarifas',this)">💲 Tarifas</button>
+        <button class="stats-filtro" data-serie="chofer" onclick="filtrarStats('chofer',this)">👤 Chofer</button>
         <button class="stats-filtro" data-serie="ganancias" onclick="filtrarStats('ganancias',this)">📈 Ganancias</button>
+      </div>
+      <div class="stats-filtros" style="margin-top:6px;">
+        <button class="stats-filtro modo-pesos active" onclick="cambiarModoStats('pesos', this)">$ Pesos</button>
+        <button class="stats-filtro modo-pesos" onclick="cambiarModoStats('porcentaje', this)">% Porcentaje</button>
       </div>
       <div id="avisoChartStats" style="display:none;background:#FFF3E0;border:1px solid #F0A63E;border-radius:8px;padding:10px 14px;margin-top:10px;font-size:11px;color:#8A5A00;">
         ⚠️ El gráfico no pudo cargar (puede ser un bloqueo de la red donde estás conectado). Los números de las cajitas de abajo sí son correctos igual.
@@ -1432,6 +1438,7 @@ function initChartStats(){
         { label:'Combustible', data: new Array(12).fill(0), borderColor:'#C1503A', backgroundColor:'#C1503A', tension:0, pointRadius:3 },
         { label:'Tarifas (facturado)', data: new Array(12).fill(0), borderColor:'#F0A63E', backgroundColor:'#F0A63E', tension:0, pointRadius:3 },
         { label:'Ganancia neta', data: new Array(12).fill(0), borderColor:'#4C8767', backgroundColor:'#4C8767', tension:0, pointRadius:3 },
+        { label:'Chofer (18%)', data: new Array(12).fill(0), borderColor:'#6B5B95', backgroundColor:'#6B5B95', tension:0, pointRadius:3 },
       ]
     },
     options: {
@@ -1446,15 +1453,28 @@ function initChartStats(){
 }
 
 function filtrarStats(serie, btn){
-  document.querySelectorAll('.stats-filtro').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.stats-filtro[data-serie]').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   if(!chartStats) return;
   chartStats.data.datasets.forEach(ds=>{
     if(serie === 'todos'){ ds.hidden = false; return; }
-    const map = { combustible:'Combustible', tarifas:'Tarifas (facturado)', ganancias:'Ganancia neta' };
+    const map = { combustible:'Combustible', tarifas:'Tarifas (facturado)', ganancias:'Ganancia neta', chofer:'Chofer (18%)' };
     ds.hidden = (ds.label !== map[serie]);
   });
   chartStats.update();
+}
+
+let modoStats = 'pesos'; // 'pesos' | 'porcentaje'
+
+function cambiarModoStats(modo, btn){
+  modoStats = modo;
+  document.querySelectorAll('.modo-pesos').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Cambia la escala del eje Y según el modo, y repinta con los datos ya calculados
+  if(chartStats){
+    chartStats.options.scales.y.ticks.callback = (modo==='porcentaje') ? (v=>v+'%') : (v=>'$'+(v/1000)+'k');
+  }
+  recalcularYPintarStats(anioActual, ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']);
 }
 
 document.addEventListener('DOMContentLoaded', initChartStats);
@@ -1837,7 +1857,7 @@ function iniciarStatsEnVivo(anio){
 
 function recalcularYPintarStats(anio, meses){
   const datosAnio = datosViajesPorMesStats[anio] || {};
-  const combustible = [], tarifas = [], ganancias = [];
+  const combustible = [], tarifas = [], ganancias = [], chofer18 = [];
   let sumCombustible=0, sumTarifas=0, sumGanancias=0;
   meses.forEach(mes=>{
     const data = datosAnio[mes];
@@ -1849,8 +1869,9 @@ function recalcularYPintarStats(anio, meses){
       });
     }
     const costoComb = litros*precioGasoilStatsCache;
-    const ganancia = facturado - (facturado*0.18) - costoComb;
-    combustible.push(costoComb); tarifas.push(facturado); ganancias.push(ganancia);
+    const costoChofer = facturado*0.18;
+    const ganancia = facturado - costoChofer - costoComb;
+    combustible.push(costoComb); tarifas.push(facturado); ganancias.push(ganancia); chofer18.push(costoChofer);
     sumCombustible+=costoComb; sumTarifas+=facturado; sumGanancias+=ganancia;
   });
   // Los totales de las 3 cajitas se actualizan siempre, aunque el gráfico no haya podido cargar
@@ -1867,10 +1888,25 @@ function recalcularYPintarStats(anio, meses){
   // gráfico no "cae a cero" al final, y no queda vacío hasta que llega ese mes.
   const hoy = new Date();
   const corte = (anio == hoy.getFullYear()) ? (hoy.getMonth()+1) : 12;
+
+  let dCombustible = combustible.slice(0, corte);
+  let dTarifas = tarifas.slice(0, corte);
+  let dGanancias = ganancias.slice(0, corte);
+  let dChofer = chofer18.slice(0, corte);
+
+  if(modoStats === 'porcentaje'){
+    // Cada línea pasa a ser "% de lo Facturado ese mes" (Facturado siempre queda en 100%)
+    dCombustible = dCombustible.map((v,i)=> dTarifas[i]>0 ? +(v/dTarifas[i]*100).toFixed(1) : 0);
+    dGanancias = dGanancias.map((v,i)=> dTarifas[i]>0 ? +(v/dTarifas[i]*100).toFixed(1) : 0);
+    dChofer = dChofer.map((v,i)=> dTarifas[i]>0 ? +(v/dTarifas[i]*100).toFixed(1) : 0);
+    dTarifas = dTarifas.map(v => v>0 ? 100 : 0);
+  }
+
   chartStats.data.labels = meses.slice(0, corte);
-  chartStats.data.datasets[0].data = combustible.slice(0, corte);
-  chartStats.data.datasets[1].data = tarifas.slice(0, corte);
-  chartStats.data.datasets[2].data = ganancias.slice(0, corte);
+  chartStats.data.datasets[0].data = dCombustible;
+  chartStats.data.datasets[1].data = dTarifas;
+  chartStats.data.datasets[2].data = dGanancias;
+  chartStats.data.datasets[3].data = dChofer;
   chartStats.update();
 }
 
