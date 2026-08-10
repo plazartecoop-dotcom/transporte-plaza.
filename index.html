@@ -128,6 +128,9 @@
   tbody tr:hover td.facturable{background:#FCF3E1;}
   tbody tr.selected{background:var(--green-soft);}
   tbody tr.selected td.facturable{background:#DDEDE4;}
+  tbody tr.ya-facturado{background:#F0EEE9;opacity:0.75;}
+  tbody tr.ya-facturado td.facturable{background:#EAE7E0;}
+  .badge-facturado{background:var(--asphalt-2);color:#fff;font-size:8.5px;font-weight:700;padding:2px 6px;border-radius:5px;text-transform:uppercase;letter-spacing:0.3px;white-space:nowrap;}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;}
   .chip{display:inline-block;padding:1px 6px;border-radius:999px;font-size:9.5px;font-weight:600;}
   .chip.camion1{background:#EFE3D9;color:var(--orange-dark);}
@@ -405,7 +408,7 @@
           <tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">Cargando…</td></tr>
         </tbody>
         <tfoot>
-          <tr class="foot-row"><td colspan="9">Total a facturar</td><td class="num highlight" id="totalFacturar">0,00</td></tr>
+          <tr class="foot-row"><td colspan="9">Total a facturar <span id="fechaFacturadoTotal" style="font-weight:400;color:var(--muted);text-transform:none;font-size:9px;"></span></td><td class="num highlight" id="totalFacturar">0,00</td></tr>
         </tfoot>
       </table>
       </div>
@@ -885,10 +888,15 @@ function cargarViajes(anio, mes){
       const costoGasoil = (parseFloat(v.gasoil)||0) * precioGasoilStatsCache;
       const resultado = totalFact - porc18 - costoGasoil;
       const tr = document.createElement('tr');
-      if(v.paraFacturar) tr.classList.add('selected');
+      if(v.facturado){
+        tr.classList.add('ya-facturado');
+      } else if(v.paraFacturar){
+        tr.classList.add('selected');
+      }
+      const chipFecha = v.facturado ? `<span class="badge-facturado">✓ Facturado</span> ${v.fecha||''}` : (v.fecha||'');
       tr.innerHTML = `
-        <td class="checkbox-cell"><input type="checkbox" ${v.paraFacturar?'checked':''} onchange="toggleParaFacturar('${id}', this.checked)"></td>
-        <td class="facturable">${v.fecha||''}</td><td class="facturable">${v.remito||''}</td><td class="facturable">${v.empresa||''}</td>
+        <td class="checkbox-cell"><input type="checkbox" ${v.paraFacturar?'checked':''} ${v.facturado?'disabled':''} onchange="toggleParaFacturar('${id}', this.checked)"></td>
+        <td class="facturable">${chipFecha}</td><td class="facturable">${v.remito||''}</td><td class="facturable">${v.empresa||''}</td>
         <td class="facturable">${v.origen||''}</td><td class="facturable">${v.producto||''}</td><td class="facturable num">${v.kilos||''}</td>
         <td class="facturable num">${v.kgaf||''}</td><td class="facturable num">${fmtNum(v.tarifa)}</td><td class="facturable num">${v.kmtabla||''}</td>
         <td class="facturable num">${fmtNum(totalFact)}</td><td class="num">${v.kmreal||''}</td>
@@ -1634,6 +1642,7 @@ function cargarParaFacturar(anio, mes){
     const data = snap.val();
     tbody.innerHTML = '';
     let total = 0, n = 0;
+    const fechasFacturado = new Set();
     idsVisiblesFacturar = [];
     if(data){
       Object.entries(data).forEach(([id, v])=>{
@@ -1645,9 +1654,9 @@ function cargarParaFacturar(anio, mes){
         idsVisiblesFacturar.push(id);
         const tf = parseFloat(v.totalFact)||0;
         total += tf;
+        if(v.fechaFacturado) fechasFacturado.add(v.fechaFacturado);
         const tr = document.createElement('tr');
-        const colFecha = vistaFacturarActual === 'historico' ? `${v.fecha||''} <span style="color:var(--muted);font-size:9px;">(fact. ${v.fechaFacturado?fmtFechaCorta(v.fechaFacturado):''})</span>` : (v.fecha||'');
-        tr.innerHTML = `<td>${colFecha}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
+        tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -1657,6 +1666,17 @@ function cargarParaFacturar(anio, mes){
     }
     document.getElementById('cardPeriodoFacturar').innerText = `${n} viaje${n===1?'':'s'} · totalmente editable`;
     document.getElementById('totalFacturar').innerText = fmtNum(total);
+    const spanFecha = document.getElementById('fechaFacturadoTotal');
+    if(vistaFacturarActual === 'historico' && fechasFacturado.size > 0){
+      const fechasOrdenadas = [...fechasFacturado].sort();
+      if(fechasOrdenadas.length === 1){
+        spanFecha.innerText = `· facturado el ${fmtFechaCorta(fechasOrdenadas[0])}`;
+      } else {
+        spanFecha.innerText = `· facturado entre el ${fmtFechaCorta(fechasOrdenadas[0])} y el ${fmtFechaCorta(fechasOrdenadas[fechasOrdenadas.length-1])}`;
+      }
+    } else {
+      spanFecha.innerText = '';
+    }
   });
 }
 
