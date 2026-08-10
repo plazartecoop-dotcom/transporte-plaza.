@@ -321,7 +321,7 @@
         <label>Tarifa<input type="number" id="v-tarifa" step="0.01" oninput="recalcularTotalFact()"></label>
         <label>KM Tabla<input type="number" id="v-kmtabla" step="0.1" oninput="recalcularTotalFact()"></label>
         <label>Total a Facturar<input type="number" id="v-totalfact" step="0.01"></label>
-        <label>KM Real<input type="number" id="v-kmreal" step="0.1" oninput="autocompletarGasoil()"></label>
+        <label>KM Real (ida)<input type="number" id="v-kmreal" step="0.1" oninput="autocompletarGasoil()"></label>
         <label>Chofer<input type="text" id="v-chofer" list="listaChoferes" placeholder="G. Pérez" onchange="autocompletarCamion()"></label>
         <datalist id="listaChoferes"></datalist>
         <label>Camión<input type="text" id="v-camion" list="listaCamiones" placeholder="C1"></label>
@@ -882,7 +882,8 @@ function cargarViajes(anio, mes){
       const totalFact = parseFloat(v.totalFact) || 0;
       totalMes += totalFact;
       const porc18 = totalFact * 0.18;
-      const resultado = totalFact - porc18;
+      const costoGasoil = (parseFloat(v.gasoil)||0) * precioGasoilStatsCache;
+      const resultado = totalFact - porc18 - costoGasoil;
       const tr = document.createElement('tr');
       if(v.paraFacturar) tr.classList.add('selected');
       tr.innerHTML = `
@@ -985,13 +986,14 @@ function completarDatosFaltantes(v){
       const consumo = (snap.exists() && snap.val().consumo) ? snap.val().consumo : consumoActualCache;
       document.getElementById('v-consumo').value = consumo;
       // Si además le faltaba el Gas-Oil y tiene KM Real, lo completa ahora con el consumo recién traído
+      // (KM Real es de IDA, el recorrido real es el doble — ida y vuelta)
       if(!v.gasoil && v.kmreal){
-        const estimado = (parseFloat(v.kmreal) * parseFloat(consumo) / 100).toFixed(1);
+        const estimado = (parseFloat(v.kmreal) * 2 * parseFloat(consumo) / 100).toFixed(1);
         document.getElementById('v-gasoil').value = estimado;
       }
     });
   } else if(!v.gasoil && v.kmreal){
-    const estimado = (parseFloat(v.kmreal) * parseFloat(v.consumo) / 100).toFixed(1);
+    const estimado = (parseFloat(v.kmreal) * 2 * parseFloat(v.consumo) / 100).toFixed(1);
     document.getElementById('v-gasoil').value = estimado;
   }
 
@@ -1414,13 +1416,14 @@ function autocompletarGasoil(){
   recalcularGasoil();
 }
 
-// Gas-Oil = KM Real × Consumo / 100. Se recalcula cada vez que tocás Consumo a mano
-// (por ejemplo, "hoy hizo más viento" y le subís 1-2 litros cada 100km).
+// Gas-Oil = (KM Real × 2) × Consumo / 100 — KM Real es de IDA, así que el recorrido
+// real del camión es el doble (ida y vuelta). Se recalcula cada vez que tocás Consumo
+// a mano (por ejemplo, "hoy hizo más viento" y le subís 1-2 litros cada 100km).
 function recalcularGasoil(){
   const kmreal = parseFloat(document.getElementById('v-kmreal').value);
   const consumo = parseFloat(document.getElementById('v-consumo').value);
   if(isNaN(kmreal) || isNaN(consumo)) return;
-  document.getElementById('v-gasoil').value = (kmreal * consumo / 100).toFixed(1);
+  document.getElementById('v-gasoil').value = (kmreal * 2 * consumo / 100).toFixed(1);
 }
 
 function autocompletarCamion(){
@@ -1855,7 +1858,8 @@ function sumarKmCamion(camion, fechaDesde){
       Object.values(snap.val()).forEach(v=>{
         if(v.camion !== camion) return;
         if(fechaDesde && v.fecha < fechaDesde) return;
-        total += parseFloat(v.kmreal)||0;
+        // KM Real es de IDA — el recorrido real del camión es el doble (ida y vuelta)
+        total += (parseFloat(v.kmreal)||0) * 2;
       });
     });
     return total;
@@ -1895,7 +1899,8 @@ function calcularConsumo(){
       Object.values(snap.val()).forEach(v=>{
         if(v.camion !== CAMION_ACTUAL) return;
         if(!v.fecha || v.fecha < desde || v.fecha > hasta) return;
-        kmTotal += parseFloat(v.kmreal)||0;
+        // KM Real es de IDA — el recorrido real del camión es el doble (ida y vuelta)
+        kmTotal += (parseFloat(v.kmreal)||0) * 2;
         const litros = parseFloat(v.gasoil)||0;
         litrosReales += litros;
         if(litros>0) filas.push(v);
