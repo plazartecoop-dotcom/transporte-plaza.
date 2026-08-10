@@ -285,6 +285,7 @@
     <button class="nav-pill" onclick="mostrar('camion',this)">🚚 Panel Camión <span class="badge-alert" id="badgeCamion" style="display:none;">!</span></button>
     <button class="nav-pill" onclick="mostrar('tarifas',this)">💲 Tarifas</button>
     <button class="nav-pill" onclick="mostrar('stats',this)">📊 Estadísticas</button>
+    <button class="nav-pill" onclick="mostrar('balance',this)">📅 Balance</button>
   </div>
 </div>
 
@@ -318,7 +319,7 @@
         <label>Kilos<input type="number" id="v-kilos" step="1" oninput="autocompletarKgAf()"></label>
         <label>Kg. Af.<input type="number" id="v-kgaf" step="1" oninput="recalcularTotalFact()"></label>
         <label>Tarifa<input type="number" id="v-tarifa" step="0.01" oninput="recalcularTotalFact()"></label>
-        <label>KM Tabla<input type="number" id="v-kmtabla" step="0.1"></label>
+        <label>KM Tabla<input type="number" id="v-kmtabla" step="0.1" oninput="recalcularTotalFact()"></label>
         <label>Total a Facturar<input type="number" id="v-totalfact" step="0.01"></label>
         <label>KM Real<input type="number" id="v-kmreal" step="0.1" oninput="autocompletarGasoil()"></label>
         <label>Chofer<input type="text" id="v-chofer" list="listaChoferes" placeholder="G. Pérez" onchange="autocompletarCamion()"></label>
@@ -379,20 +380,25 @@
 
   <section class="section" id="facturar">
     <div class="meta-title">Para Facturar <span id="tituloFacturar">· resumen listo para compartir</span></div>
+    <div class="stats-filtros" style="margin-bottom:10px;">
+      <button class="stats-filtro active" id="btnFacturarPendientes" onclick="verFacturarPendientes()">🕐 Pendientes</button>
+      <button class="stats-filtro" id="btnFacturarHistorico" onclick="verFacturarHistorico()">📁 Histórico facturado</button>
+    </div>
     <div class="invoice-card">
       <div class="invoice-head">
         <div>
           <h2 id="cardTituloFacturar">Selección del mes</h2>
           <div class="period" id="cardPeriodoFacturar">totalmente editable</div>
         </div>
-        <div style="display:flex;gap:6px;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn-ghost" onclick="imprimirSeccion()">🖨️ Imprimir</button>
           <button class="btn-orange" onclick="copiarSeccion('facturar')">↗ Compartir</button>
+          <button class="btn-orange" id="btnMarcarFacturado" style="background:var(--green);" onclick="marcarComoFacturado()">✅ Marcar como facturado</button>
         </div>
       </div>
       <div style="overflow-x:auto;">
       <table class="plain">
-        <thead>
+        <thead id="theadFacturar">
           <tr><th>Fecha</th><th>Remito</th><th>Empresa</th><th>Origen</th><th>Producto</th><th class="num">Kilos</th><th class="num">Kg.Af</th><th class="num">Tarifa</th><th class="num">KM Tabla</th><th class="num">Total a Facturar</th></tr>
         </thead>
         <tbody id="tbody-facturar">
@@ -403,7 +409,7 @@
         </tfoot>
       </table>
       </div>
-      <div class="boletin-note">💡 Los viajes que aparecen acá son los que tildaste con el check en la pestaña Viajes. Destildalos ahí si querés sacarlos de esta lista.</div>
+      <div class="boletin-note" id="notaFacturar">💡 Los viajes que aparecen acá son los que tildaste con el check en la pestaña Viajes. Cuando ya facturaste este lote, tocá "✅ Marcar como facturado" — van a pasar al Histórico y liberan lugar acá.</div>
     </div>
   </section>
 
@@ -702,6 +708,52 @@
     </div>
   </section>
 
+  <section class="section" id="balance">
+    <div class="meta-title">Balance <span>· resumen agrupado por día</span></div>
+    <div class="section-actions">
+      <button class="btn-accion" onclick="imprimirSeccion()">🖨️ Imprimir</button>
+      <button class="btn-accion" onclick="copiarSeccion('balance')">📋 Copiar</button>
+    </div>
+    <div class="year-row" id="yearRowBalance">
+      <button class="year-pill" onclick="cambiarAnio(2025,this)">2025</button>
+      <button class="year-pill active" onclick="cambiarAnio(2026,this)">2026</button>
+      <button class="year-pill new-year" onclick="nuevoAnio()">＋ Año nuevo</button>
+    </div>
+    <div class="month-row" id="monthRowBalance">
+      <button class="month-pill" onclick="cambiarMes('Ene',this)">Ene</button>
+      <button class="month-pill" onclick="cambiarMes('Feb',this)">Feb</button>
+      <button class="month-pill" onclick="cambiarMes('Mar',this)">Mar</button>
+      <button class="month-pill" onclick="cambiarMes('Abr',this)">Abr</button>
+      <button class="month-pill" onclick="cambiarMes('May',this)">May</button>
+      <button class="month-pill" onclick="cambiarMes('Jun',this)">Jun</button>
+      <button class="month-pill" onclick="cambiarMes('Jul',this)">Jul</button>
+      <button class="month-pill active" onclick="cambiarMes('Ago',this)">Ago</button>
+      <button class="month-pill" onclick="cambiarMes('Sep',this)">Sep</button>
+      <button class="month-pill" onclick="cambiarMes('Oct',this)">Oct</button>
+      <button class="month-pill" onclick="cambiarMes('Nov',this)">Nov</button>
+      <button class="month-pill" onclick="cambiarMes('Dic',this)">Dic</button>
+    </div>
+
+    <div class="stat-pair" style="margin-top:6px;">
+      <div class="stat-box"><div class="lbl">Facturado del mes</div><div class="val" id="balFacturadoMes">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Ganancia del mes</div><div class="val" id="balGananciaMes" style="color:var(--green);">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Combustible del mes</div><div class="val" id="balCombustibleMes">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Chofer 18% del mes</div><div class="val" id="balChoferMes">$ 0</div></div>
+    </div>
+
+    <div class="invoice-card" style="margin-top:12px;">
+      <div style="overflow-x:auto;">
+      <table class="plain">
+        <thead><tr><th>Fecha</th><th class="num">Viajes</th><th class="num">Facturado</th><th class="num">18% Chofer</th><th class="num">Combustible</th><th class="num">Ganancia neta</th></tr></thead>
+        <tbody id="tbody-balance">
+          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Cargando…</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="boletin-note">💡 Cada fila agrupa todos los viajes cargados ese día, sin importar el chofer o el camión. Es la foto financiera real del día — para el detalle por chofer, andá al Boletín.</div>
+    </div>
+  </section>
+
 </main>
 
 
@@ -729,6 +781,7 @@ function mostrar(id, btn){
     // termine de mostrar la pestaña antes de medir el tamaño real.
     setTimeout(()=>{ if(chartStats) chartStats.resize(); }, 50);
   }
+  if(id==='balance') cargarBalance(anioActual, mesActual);
 }
 document.querySelectorAll('tbody tr').forEach(row=>{
   const cb = row.querySelector('input[type=checkbox]');
@@ -788,6 +841,7 @@ function refrescarPestanaActiva(){
   if(activa.id==='boletin') cargarBoletin(anioActual, mesActual);
   if(activa.id==='camion') cargarPanelCamion();
   if(activa.id==='stats') cargarStatsReal(anioActual);
+  if(activa.id==='balance') cargarBalance(anioActual, mesActual);
 }
 
 function nuevoAnio(){
@@ -1547,28 +1601,72 @@ function sanitizeKey(str){
 }
 
 // ===== PARA FACTURAR (lee viajes reales tildados) =====
+let vistaFacturarActual = 'pendientes'; // 'pendientes' | 'historico'
+let idsVisiblesFacturar = []; // guarda qué viajes (id + mes) están listados ahora, para el botón de marcar
+
+function verFacturarPendientes(){
+  vistaFacturarActual = 'pendientes';
+  document.getElementById('btnFacturarPendientes').classList.add('active');
+  document.getElementById('btnFacturarHistorico').classList.remove('active');
+  document.getElementById('btnMarcarFacturado').style.display = 'inline-block';
+  document.getElementById('notaFacturar').innerText = '💡 Los viajes que aparecen acá son los que tildaste con el check en la pestaña Viajes. Cuando ya facturaste este lote, tocá "✅ Marcar como facturado" — van a pasar al Histórico y liberan lugar acá.';
+  cargarParaFacturar(anioActual, mesActual);
+}
+
+function verFacturarHistorico(){
+  vistaFacturarActual = 'historico';
+  document.getElementById('btnFacturarHistorico').classList.add('active');
+  document.getElementById('btnFacturarPendientes').classList.remove('active');
+  document.getElementById('btnMarcarFacturado').style.display = 'none';
+  document.getElementById('notaFacturar').innerText = '📁 Estos viajes ya fueron marcados como facturados. Quedan acá como registro histórico, no se pueden volver a marcar.';
+  cargarParaFacturar(anioActual, mesActual);
+}
+
 function cargarParaFacturar(anio, mes){
   const tbody = document.getElementById('tbody-facturar');
   if(!tbody || !window.fb) return;
-  document.getElementById('cardTituloFacturar').innerText = `Selección — ${mes} ${anio}`;
+  const nombreVista = vistaFacturarActual === 'pendientes' ? 'Pendientes' : 'Histórico facturado';
+  document.getElementById('cardTituloFacturar').innerText = `${nombreVista} — ${mes} ${anio}`;
   window.fb.onValue(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`), (snap)=>{
     const data = snap.val();
     tbody.innerHTML = '';
     let total = 0, n = 0;
+    idsVisiblesFacturar = [];
     if(data){
-      Object.values(data).forEach(v=>{
-        if(!v.paraFacturar) return;
+      Object.entries(data).forEach(([id, v])=>{
+        const coincide = vistaFacturarActual === 'pendientes'
+          ? (v.paraFacturar && !v.facturado)
+          : (v.paraFacturar && v.facturado);
+        if(!coincide) return;
         n++;
+        idsVisiblesFacturar.push(id);
         const tf = parseFloat(v.totalFact)||0;
         total += tf;
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
+        const colFecha = vistaFacturarActual === 'historico' ? `${v.fecha||''} <span style="color:var(--muted);font-size:9px;">(fact. ${v.fechaFacturado?fmtFechaCorta(v.fechaFacturado):''})</span>` : (v.fecha||'');
+        tr.innerHTML = `<td>${colFecha}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
         tbody.appendChild(tr);
       });
     }
-    if(n===0) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">No hay viajes tildados "Para Facturar" este mes.</td></tr>';
+    if(n===0){
+      const msj = vistaFacturarActual === 'pendientes' ? 'No hay viajes tildados "Para Facturar" este mes.' : 'Todavía no marcaste ningún viaje como facturado este mes.';
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">${msj}</td></tr>`;
+    }
     document.getElementById('cardPeriodoFacturar').innerText = `${n} viaje${n===1?'':'s'} · totalmente editable`;
     document.getElementById('totalFacturar').innerText = fmtNum(total);
+  });
+}
+
+function marcarComoFacturado(){
+  if(idsVisiblesFacturar.length === 0){ alert('No hay viajes pendientes para marcar.'); return; }
+  if(!confirm(`¿Marcar ${idsVisiblesFacturar.length} viaje(s) como facturados? Van a pasar al Histórico.`)) return;
+  const hoy = new Date().toISOString().slice(0,10);
+  const basePath = `viajes/a${anioActual}/${mesActual}`;
+  const promesas = idsVisiblesFacturar.map(id =>
+    window.fb.update(window.fb.ref(window.fb.db, `${basePath}/${id}`), { facturado: true, fechaFacturado: hoy })
+  );
+  Promise.all(promesas).then(()=>{
+    mostrarToast('✅ Viajes marcados como facturados');
   });
 }
 
@@ -1831,6 +1929,50 @@ let datosViajesPorMesStats = {};   // { anio: { mes: data } }
 let precioGasoilStatsCache = 2400;
 let aniosStatsSuscriptos = new Set();
 
+// ===== BALANCE (agrupado por día) =====
+function cargarBalance(anio, mes){
+  const tbody = document.getElementById('tbody-balance');
+  if(!tbody || !window.fb) return;
+  window.fb.onValue(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`), (snap)=>{
+    const data = snap.val();
+    tbody.innerHTML = '';
+    const porDia = {}; // { 'YYYY-MM-DD': {facturado, chofer, combustible, n} }
+    let totFacturado=0, totChofer=0, totCombustible=0;
+    if(data){
+      Object.values(data).forEach(v=>{
+        if(!v.fecha) return;
+        const facturado = parseFloat(v.totalFact)||0;
+        const litros = parseFloat(v.gasoil)||0;
+        const combustible = litros*precioGasoilStatsCache;
+        const chofer = facturado*0.18;
+        if(!porDia[v.fecha]) porDia[v.fecha] = {facturado:0, chofer:0, combustible:0, n:0};
+        porDia[v.fecha].facturado += facturado;
+        porDia[v.fecha].chofer += chofer;
+        porDia[v.fecha].combustible += combustible;
+        porDia[v.fecha].n += 1;
+        totFacturado += facturado; totChofer += chofer; totCombustible += combustible;
+      });
+    }
+    const fechas = Object.keys(porDia).sort();
+    if(fechas.length === 0){
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No hay viajes cargados este mes.</td></tr>';
+    } else {
+      fechas.forEach(f=>{
+        const d = porDia[f];
+        const ganancia = d.facturado - d.chofer - d.combustible;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${fmtFechaCorta(f)}</td><td class="num">${d.n}</td><td class="num">${fmtNum(d.facturado)}</td><td class="num">${fmtNum(d.chofer)}</td><td class="num">${fmtNum(d.combustible)}</td><td class="num" style="color:${ganancia>=0?'var(--green)':'#C1503A'}">${fmtNum(ganancia)}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    const totGanancia = totFacturado - totChofer - totCombustible;
+    document.getElementById('balFacturadoMes').innerText = '$ ' + fmtNum(totFacturado).split(',')[0];
+    document.getElementById('balGananciaMes').innerText = '$ ' + fmtNum(totGanancia).split(',')[0];
+    document.getElementById('balCombustibleMes').innerText = '$ ' + fmtNum(totCombustible).split(',')[0];
+    document.getElementById('balChoferMes').innerText = '$ ' + fmtNum(totChofer).split(',')[0];
+  });
+}
+
 function cargarStatsReal(anio){
   iniciarStatsEnVivo(anio);
   // Además de la escucha en vivo, hace una lectura fresca directa cada vez que
@@ -1978,3 +2120,4 @@ document.addEventListener('DOMContentLoaded', ()=>esperarFirebaseYcargar(25));
 
 </body>
 </html>
+
