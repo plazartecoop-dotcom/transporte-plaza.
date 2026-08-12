@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js';"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" onerror="this.onerror=null;this.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, set, get, update, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
@@ -393,9 +394,9 @@
           <h2 id="cardTituloFacturar">Selección del mes</h2>
           <div class="period" id="cardPeriodoFacturar">totalmente editable</div>
         </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <div class="no-capturar" style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn-ghost" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-          <button class="btn-orange" onclick="copiarSeccion('facturar')">↗ Compartir</button>
+          <button class="btn-orange" onclick="compartirComoImagen('facturar')">📷 Compartir imagen</button>
           <button class="btn-orange" id="btnMarcarFacturado" style="background:var(--green);" onclick="marcarComoFacturado()">✅ Marcar como facturado</button>
         </div>
       </div>
@@ -412,7 +413,7 @@
         </tfoot>
       </table>
       </div>
-      <div class="boletin-note" id="notaFacturar">💡 Los viajes que aparecen acá son los que tildaste con el check en la pestaña Viajes. Cuando ya facturaste este lote, tocá "✅ Marcar como facturado" — van a pasar al Histórico y liberan lugar acá.</div>
+      <div class="boletin-note no-capturar" id="notaFacturar">💡 Los viajes que aparecen acá son los que tildaste con el check en la pestaña Viajes. Cuando ya facturaste este lote, tocá "✅ Marcar como facturado" — van a pasar al Histórico y liberan lugar acá.</div>
     </div>
   </section>
 
@@ -1563,6 +1564,43 @@ function imprimirSeccion(){
   window.print();
 }
 
+// Genera una imagen (foto) del recuadro de la tabla, tal cual se ve en pantalla,
+// y la manda directo al selector de compartir del celular (WhatsApp, mail, etc).
+// Si el navegador no soporta compartir archivos, la descarga para adjuntarla a mano.
+async function compartirComoImagen(idSeccion){
+  const seccion = document.getElementById(idSeccion);
+  const el = seccion.querySelector('.invoice-card') || seccion;
+  if(typeof html2canvas === 'undefined'){
+    alert('No se pudo cargar la herramienta de imagen (revisá la conexión a internet) — probá con Imprimir o Copiar mientras tanto.');
+    return;
+  }
+  mostrarToast('📷 Generando imagen…');
+  try{
+    const canvas = await html2canvas(el, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      ignoreElements: (node) => node.classList && node.classList.contains('no-capturar')
+    });
+    canvas.toBlob(async (blob) => {
+      const nombreArchivo = `${idSeccion}_${anioActual}_${mesActual}.png`;
+      const file = new File([blob], nombreArchivo, { type: 'image/png' });
+      if(navigator.canShare && navigator.canShare({ files: [file] })){
+        try{
+          await navigator.share({ files: [file], title: 'Transporte Plaza' });
+        }catch(e){ /* el usuario canceló el compartir, no hace falta avisar nada */ }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = nombreArchivo; a.click();
+        URL.revokeObjectURL(url);
+        mostrarToast('📷 Imagen descargada — adjuntala donde quieras');
+      }
+    }, 'image/png');
+  }catch(e){
+    alert('No se pudo generar la imagen: ' + e.message);
+  }
+}
+
 function copiarSeccion(idSeccion){
   const el = document.getElementById(idSeccion);
   if(!el) return;
@@ -1573,10 +1611,10 @@ function copiarSeccion(idSeccion){
   // Convierte cada tabla visible en texto plano, tipo "Fecha | Empresa | Total"
   el.querySelectorAll('table').forEach(tabla=>{
     tabla.querySelectorAll('tr').forEach(tr=>{
-      const celdas = Array.from(tr.children)
-        .map(c => c.innerText.trim())
-        .filter(t => t.length>0);
-      if(celdas.length) texto += celdas.join('  |  ') + '\n';
+      const celdas = Array.from(tr.children).map(c => c.innerText.trim());
+      const tieneAlgo = celdas.some(t => t.length > 0);
+      // Las celdas vacías se dejan como "—" para no correr las columnas de lugar
+      if(tieneAlgo) texto += celdas.map(t => t || '—').join('  |  ') + '\n';
     });
     texto += '\n';
   });
