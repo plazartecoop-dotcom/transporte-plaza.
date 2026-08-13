@@ -1042,6 +1042,10 @@ function guardarViaje(){
     alert('Como mínimo cargá la Fecha y la Empresa.');
     return;
   }
+  if(!fechaEsValida(viaje.fecha)){
+    alert('⚠️ La Fecha del viaje no es válida (revisá que el año tenga 4 dígitos, ej: 2026). No se guardó nada — corregila e intentá de nuevo.');
+    return;
+  }
   const basePath = `viajes/a${anioActual}/${mesActual}`;
   if(viajeEditandoId){
     // Mantiene el estado de "Para Facturar" que ya tenía
@@ -1223,6 +1227,19 @@ function autocompletarTarifaBolsas(){
   });
 }
 
+// Valida que una fecha tenga formato correcto (año de 4 dígitos, entre 2020 y 2035).
+// Esto evita que un error de tipeo en el selector de fecha (ej: "20265" en vez de "2026")
+// guarde una fecha rota que después rompe el ordenamiento por vigencia.
+function fechaEsValida(fecha){
+  if(!fecha) return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(fecha);
+  if(!match) return false;
+  const anio = parseInt(match[1], 10);
+  if(anio < 2020 || anio > 2035) return false;
+  const dt = new Date(fecha+'T00:00:00');
+  return !isNaN(dt.getTime());
+}
+
 function guardarTarifaDestino(){
   const destino = document.getElementById('t-destino').value.trim();
   const empresa = document.getElementById('t-empresa').value.trim();
@@ -1232,6 +1249,10 @@ function guardarTarifaDestino(){
   const desde = document.getElementById('t-desde').value;
   if(!destino || !tarifa || !desde){
     alert('Como mínimo cargá Destino, Tarifa y Vigente desde.');
+    return;
+  }
+  if(!fechaEsValida(desde)){
+    alert('⚠️ La fecha "Vigente desde" no es válida (revisá que el año tenga 4 dígitos, ej: 2026). No se guardó nada — corregila e intentá de nuevo.');
     return;
   }
   const nuevoRef = window.fb.push(window.fb.ref(window.fb.db, 'tarifasDestino'));
@@ -1465,6 +1486,10 @@ function guardarTarifaBolsas(){
   const desde = document.getElementById('tb-desde').value;
   if(!tarifa || !desde){
     alert('Cargá la Tarifa $/km y la fecha Vigente desde.');
+    return;
+  }
+  if(!fechaEsValida(desde)){
+    alert('⚠️ La fecha "Vigente desde" no es válida (revisá que el año tenga 4 dígitos, ej: 2026). No se guardó nada — corregila e intentá de nuevo.');
     return;
   }
   const nuevoRef = window.fb.push(window.fb.ref(window.fb.db, 'tarifasBolsas'));
