@@ -1303,34 +1303,39 @@ function cargarTarifasDestino(){
       tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">No hay tarifas cargadas todavía. Tocá "+ Nueva tarifa" para empezar.</td></tr>';
       return;
     }
-    // Agrupa por destino para calcular la vigencia (Hasta) automáticamente
-    const grupos = {};
-    Object.entries(data).forEach(([id, v])=>{
-      if(!grupos[v.destino]) grupos[v.destino] = [];
-      grupos[v.destino].push({id, ...v});
-    });
-    let filas = [];
-    Object.values(grupos).forEach(lista=>{
-      lista.sort((a,b)=> a.desde.localeCompare(b.desde));
-      lista.forEach((item, i)=>{
-        const esVigente = i === lista.length-1;
-        const hasta = esVigente ? null : diaAnterior(lista[i+1].desde);
-        filas.push({...item, hasta, esVigente});
+    try{
+      // Agrupa por destino para calcular la vigencia (Hasta) automáticamente
+      const grupos = {};
+      Object.entries(data).forEach(([id, v])=>{
+        const destino = v.destino || '(sin destino)';
+        if(!grupos[destino]) grupos[destino] = [];
+        grupos[destino].push({id, ...v, destino});
       });
-    });
-    filas.sort((a,b)=> a.destino.localeCompare(b.destino) || b.desde.localeCompare(a.desde));
-    filas.forEach(f=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${f.destino}</td><td>${f.empresa||''}</td><td>${f.origen||''}</td>
-        <td class="num">${f.kmtabla||''}</td><td class="num">${fmtNum(f.tarifa)}</td>
-        <td>${fmtFechaCorta(f.desde)}</td>
-        <td ${f.esVigente?'style="color:var(--muted)"':''}>${f.esVigente ? '— (actual)' : fmtFechaCorta(f.hasta)}</td>
-        <td><span class="chip ${f.esVigente?'camion1':'chofer'}">${f.esVigente?'Vigente':'Anterior'}</span></td>
-        <td class="col-accion"><button class="btn-edit" onclick="editarTarifa('${f.id}')">✏️</button> <button class="btn-edit" onclick="borrarTarifaDestino('${f.id}')">🗑️</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
+      let filas = [];
+      Object.values(grupos).forEach(lista=>{
+        lista.sort((a,b)=> (a.desde||'').localeCompare(b.desde||''));
+        lista.forEach((item, i)=>{
+          const esVigente = i === lista.length-1;
+          const hasta = esVigente ? null : diaAnterior(lista[i+1].desde || new Date().toISOString().slice(0,10));
+          filas.push({...item, hasta, esVigente});
+        });
+      });
+      filas.sort((a,b)=> a.destino.localeCompare(b.destino) || (b.desde||'').localeCompare(a.desde||''));
+      filas.forEach(f=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${f.destino}</td><td>${f.empresa||''}</td><td>${f.origen||''}</td>
+          <td class="num">${f.kmtabla||''}</td><td class="num">${fmtNum(f.tarifa)}</td>
+          <td>${f.desde ? fmtFechaCorta(f.desde) : '<span style="color:#C1503A;">⚠️ sin fecha</span>'}</td>
+          <td ${f.esVigente?'style="color:var(--muted)"':''}>${f.esVigente ? '— (actual)' : fmtFechaCorta(f.hasta)}</td>
+          <td><span class="chip ${f.esVigente?'camion1':'chofer'}">${f.esVigente?'Vigente':'Anterior'}</span></td>
+          <td class="col-accion"><button class="btn-edit" onclick="editarTarifa('${f.id}')">✏️</button> <button class="btn-edit" onclick="borrarTarifaDestino('${f.id}')">🗑️</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }catch(e){
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#C1503A;padding:20px;">⚠️ Hubo un error mostrando las tarifas: ${e.message}. Tus datos siguen guardados, avisale a Claudio con este mensaje.</td></tr>`;
+    }
   });
 }
 
