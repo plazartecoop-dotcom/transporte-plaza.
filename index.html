@@ -328,8 +328,9 @@
         <label>KM Real (ida)<input type="number" id="v-kmreal" step="0.1" oninput="autocompletarGasoil()"></label>
         <label>Chofer<input type="text" id="v-chofer" list="listaChoferes" placeholder="G. Pérez" onchange="autocompletarCamion()"></label>
         <datalist id="listaChoferes"></datalist>
-        <label>Camión<input type="text" id="v-camion" list="listaCamiones" placeholder="C1"></label>
+        <label>Camión<input type="text" id="v-camion" list="listaCamiones" placeholder="C1" oninput="chequearCamionRegistrado()"></label>
         <datalist id="listaCamiones"></datalist>
+        <div id="tarjetaCamion" style="display:none;align-self:flex-end;padding:8px 10px;border-radius:6px;font-size:9.5px;font-weight:700;white-space:nowrap;"></div>
         <label>Consumo (L/100km)<input type="number" id="v-consumo" step="0.1" oninput="recalcularGasoil()"></label>
         <label>Gas-Oil (litros)<input type="number" id="v-gasoil" step="0.1"></label>
       </div>
@@ -400,7 +401,7 @@
           <button class="btn-orange" id="btnMarcarFacturado" style="background:var(--green);" onclick="marcarComoFacturado()">✅ Marcar como facturado</button>
         </div>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap" id="wrapTablaFacturar">
       <table class="plain">
         <thead id="theadFacturar">
           <tr><th>Fecha</th><th>Remito</th><th>Empresa</th><th>Origen</th><th>Producto</th><th class="num">Kilos</th><th class="num">Kg.Af</th><th class="num">Tarifa</th><th class="num">KM Tabla</th><th class="num">Total a Facturar</th></tr>
@@ -413,6 +414,7 @@
         </tfoot>
       </table>
       </div>
+      <div id="bloquesHistorico" style="display:none;"></div>
       <div class="boletin-note no-capturar" id="notaFacturar">💡 Los viajes que aparecen acá son los que tildaste con el check en la pestaña Viajes. Cuando ya facturaste este lote, tocá "✅ Marcar como facturado" — van a pasar al Histórico y liberan lugar acá.</div>
     </div>
   </section>
@@ -454,7 +456,7 @@
       </div>
       <div class="table-wrap">
       <table class="plain">
-        <thead><tr><th>Fecha</th><th>Remito</th><th>Destino</th><th class="num">18% Chofer</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Remito</th><th>Destino</th><th class="num">18% Chofer</th><th style="text-align:center;">Quitar</th></tr></thead>
         <tbody id="tbody-boletin">
           <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Elegí un chofer arriba.</td></tr>
         </tbody>
@@ -502,7 +504,7 @@
         <label>Nombre completo<input type="text" id="c-nombre" placeholder="Gustavo Pérez"></label>
         <label>DNI<input type="text" id="c-dni" placeholder="Opcional"></label>
         <label>Teléfono<input type="text" id="c-telefono" placeholder="Opcional"></label>
-        <label>Camión habitual<input type="text" id="c-camion" placeholder="Ej: C1"></label>
+        <label>Camión habitual<input type="text" id="c-camion" list="listaCamiones" placeholder="Ej: C1"></label>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button class="btn-orange" onclick="guardarChofer()">💾 Guardar chofer</button>
@@ -551,6 +553,28 @@
     <div class="camion-tabs" id="camionTabs">
       <div class="camion-tab" style="opacity:0.5;">Cargando…</div>
     </div>
+    <div class="card" id="cardDatosUnidad" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;">🚛 Datos de la unidad <span id="tituloUnidad"></span></h3>
+        <button class="btn-edit" onclick="toggleForm('formDatosUnidad')">✏️</button>
+      </div>
+      <table class="mini" id="tablaDatosUnidad" style="margin-top:8px;">
+        <tr><td style="color:var(--muted);">Marca / Modelo</td><td id="verMarcaModelo" style="text-align:right;">—</td></tr>
+        <tr><td style="color:var(--muted);">Patente</td><td id="verPatente" style="text-align:right;">—</td></tr>
+        <tr><td style="color:var(--muted);">Chofer asignado</td><td id="verChoferAsignado" style="text-align:right;">—</td></tr>
+      </table>
+      <div id="formDatosUnidad" style="display:none;margin-top:10px;">
+        <div class="form-grid">
+          <label>Marca / Modelo<input type="text" id="u-marca" placeholder="Ej: Mercedes Benz 1518"></label>
+          <label>Patente<input type="text" id="u-patente" placeholder="Ej: AB 123 CD"></label>
+        </div>
+        <div class="form-hint">💡 "Chofer asignado" no se edita acá — se toma solo del "Camión habitual" que cargues en la pestaña Choferes.</div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn-orange" onclick="guardarDatosUnidad()">💾 Guardar</button>
+          <button class="btn-ghost" onclick="toggleForm('formDatosUnidad')">Cancelar</button>
+        </div>
+      </div>
+    </div>
     <div class="grid-2">
       <div class="card">
         <h3>🔧 Alarma Service</h3>
@@ -562,6 +586,10 @@
         <button class="btn-block" onclick="resetearService()">✅ Resetear (service hecho)</button>
         <div class="service-config">
           Alertar cada <input type="number" id="metaService" value="10000" style="width:80px;" onchange="guardarMetaService()"> km
+        </div>
+        <div class="service-config" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);">
+          Ajuste manual <input type="number" id="ajusteKm" value="0" style="width:80px;" onchange="guardarAjusteKm()"> km
+          <span class="hint">(km ya recorridos antes de usar la app, no viene de ningún viaje)</span>
         </div>
       </div>
       <div class="card">
@@ -745,17 +773,8 @@
       <div class="stat-box"><div class="lbl">Chofer 18% del mes</div><div class="val" id="balChoferMes">$ 0</div></div>
     </div>
 
-    <div class="invoice-card" style="margin-top:12px;">
-      <div class="table-wrap">
-      <table class="plain">
-        <thead><tr><th>Fecha</th><th class="num">Viajes</th><th class="num">Facturado</th><th class="num">18% Chofer</th><th class="num">Combustible</th><th class="num">Ganancia neta</th></tr></thead>
-        <tbody id="tbody-balance">
-          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Cargando…</td></tr>
-        </tbody>
-      </table>
-      </div>
-      <div class="boletin-note">💡 Cada fila agrupa todos los viajes cargados ese día, sin importar el chofer o el camión. Es la foto financiera real del día — para el detalle por chofer, andá al Boletín.</div>
-    </div>
+    <div id="bloquesBalance" style="margin-top:12px;"></div>
+    <div class="boletin-note" style="margin-top:8px;">💡 Cada bloque agrupa los viajes de un día, sin importar el chofer o el camión. Tildá "Quitar" en un viaje puntual (ej: si te lo pagaron en efectivo) para sacarlo del cálculo de ese día — es independiente de lo que tildes en el Boletín del chofer.</div>
   </section>
 
 </main>
@@ -927,6 +946,7 @@ function abrirFormViaje(){
     document.getElementById(id).value = '';
   });
   document.getElementById('v-bolsas').checked = false;
+  document.getElementById('tarjetaCamion').style.display = 'none';
   document.getElementById('v-consumo').value = consumoActualCache; // valor provisorio, se confirma abajo
   document.getElementById('v-kilos').closest('label').style.opacity = '1';
   document.getElementById('v-kgaf').closest('label').style.opacity = '1';
@@ -969,6 +989,7 @@ function editarViaje(id){
     document.getElementById('v-kmreal').value = v.kmreal||'';
     document.getElementById('v-chofer').value = v.chofer||'';
     document.getElementById('v-camion').value = v.camion||'';
+    chequearCamionRegistrado();
     document.getElementById('v-gasoil').value = v.gasoil||'';
     document.getElementById('v-consumo').value = v.consumo||'';
     document.getElementById('v-bolsas').checked = (v.tipo === 'bolsas');
@@ -1479,6 +1500,27 @@ function aplicarCamionDeChofer(nombre, lista){
   if(chofer && chofer.camion){
     document.getElementById('v-camion').value = chofer.camion;
   }
+  chequearCamionRegistrado();
+}
+
+// Muestra una tarjeta verde si el nombre escrito coincide con un camión real
+// registrado en Panel Camión, o amarilla si no coincide con ninguno — así ese
+// kilometraje no se pierde: se sabe de entrada si se va a sumar a algún service.
+function chequearCamionRegistrado(){
+  const nombre = document.getElementById('v-camion').value.trim();
+  const tarjeta = document.getElementById('tarjetaCamion');
+  if(!nombre){ tarjeta.style.display = 'none'; return; }
+  const existe = camionesCache.some(c => c.nombre === nombre);
+  tarjeta.style.display = 'block';
+  if(existe){
+    tarjeta.style.background = '#E3F3EA';
+    tarjeta.style.color = '#1F6B45';
+    tarjeta.innerText = `✅ Registrado como ${nombre}`;
+  } else {
+    tarjeta.style.background = '#FFF3E0';
+    tarjeta.style.color = '#8A5A00';
+    tarjeta.innerText = '⚠️ No registrado todavía';
+  }
 }
 
 function guardarTarifaBolsas(){
@@ -1689,6 +1731,8 @@ function verFacturarPendientes(){
   document.getElementById('btnFacturarPendientes').classList.add('active');
   document.getElementById('btnFacturarHistorico').classList.remove('active');
   document.getElementById('btnMarcarFacturado').style.display = 'inline-block';
+  document.getElementById('wrapTablaFacturar').style.display = 'block';
+  document.getElementById('bloquesHistorico').style.display = 'none';
   document.getElementById('notaFacturar').innerText = '💡 Los viajes que aparecen acá son los que tildaste con el check en la pestaña Viajes. Cuando ya facturaste este lote, tocá "✅ Marcar como facturado" — van a pasar al Histórico y liberan lugar acá.';
   cargarParaFacturar(anioActual, mesActual);
 }
@@ -1698,54 +1742,109 @@ function verFacturarHistorico(){
   document.getElementById('btnFacturarHistorico').classList.add('active');
   document.getElementById('btnFacturarPendientes').classList.remove('active');
   document.getElementById('btnMarcarFacturado').style.display = 'none';
-  document.getElementById('notaFacturar').innerText = '📁 Estos viajes ya fueron marcados como facturados. Quedan acá como registro histórico, no se pueden volver a marcar.';
+  document.getElementById('wrapTablaFacturar').style.display = 'none';
+  document.getElementById('bloquesHistorico').style.display = 'block';
+  document.getElementById('notaFacturar').innerText = '📁 Cada bloque es un lote que marcaste como facturado el mismo día. No se pueden volver a marcar.';
   cargarParaFacturar(anioActual, mesActual);
 }
 
 function cargarParaFacturar(anio, mes){
-  const tbody = document.getElementById('tbody-facturar');
-  if(!tbody || !window.fb) return;
+  if(!window.fb) return;
   const nombreVista = vistaFacturarActual === 'pendientes' ? 'Pendientes' : 'Histórico facturado';
   document.getElementById('cardTituloFacturar').innerText = `${nombreVista} — ${mes} ${anio}`;
   window.fb.onValue(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`), (snap)=>{
     const data = snap.val();
-    tbody.innerHTML = '';
-    let total = 0, n = 0;
-    const fechasFacturado = new Set();
-    idsVisiblesFacturar = [];
-    if(data){
-      Object.entries(data).forEach(([id, v])=>{
-        const coincide = vistaFacturarActual === 'pendientes'
-          ? (v.paraFacturar && !v.facturado)
-          : (v.paraFacturar && v.facturado);
-        if(!coincide) return;
-        n++;
-        idsVisiblesFacturar.push(id);
-        const tf = parseFloat(v.totalFact)||0;
-        total += tf;
-        if(v.fechaFacturado) fechasFacturado.add(v.fechaFacturado);
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
-        tbody.appendChild(tr);
-      });
-    }
-    if(n===0){
-      const msj = vistaFacturarActual === 'pendientes' ? 'No hay viajes tildados "Para Facturar" este mes.' : 'Todavía no marcaste ningún viaje como facturado este mes.';
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">${msj}</td></tr>`;
-    }
-    document.getElementById('cardPeriodoFacturar').innerText = `${n} viaje${n===1?'':'s'} · totalmente editable`;
-    document.getElementById('totalFacturar').innerText = fmtNum(total);
-    const spanFecha = document.getElementById('fechaFacturadoTotal');
-    if(vistaFacturarActual === 'historico' && fechasFacturado.size > 0){
-      const fechasOrdenadas = [...fechasFacturado].sort();
-      if(fechasOrdenadas.length === 1){
-        spanFecha.innerText = `· facturado el ${fmtFechaCorta(fechasOrdenadas[0])}`;
-      } else {
-        spanFecha.innerText = `· facturado entre el ${fmtFechaCorta(fechasOrdenadas[0])} y el ${fmtFechaCorta(fechasOrdenadas[fechasOrdenadas.length-1])}`;
-      }
+    if(vistaFacturarActual === 'pendientes'){
+      pintarPendientes(data);
     } else {
-      spanFecha.innerText = '';
+      pintarHistoricoAgrupado(data);
     }
+  });
+}
+
+// ===== Vista Pendientes: tabla única, como siempre =====
+function pintarPendientes(data){
+  const tbody = document.getElementById('tbody-facturar');
+  tbody.innerHTML = '';
+  let total = 0, n = 0;
+  idsVisiblesFacturar = [];
+  if(data){
+    Object.entries(data).forEach(([id, v])=>{
+      if(!(v.paraFacturar && !v.facturado)) return;
+      n++;
+      idsVisiblesFacturar.push(id);
+      const tf = parseFloat(v.totalFact)||0;
+      total += tf;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  if(n===0) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">No hay viajes tildados "Para Facturar" este mes.</td></tr>';
+  document.getElementById('cardPeriodoFacturar').innerText = `${n} viaje${n===1?'':'s'} · totalmente editable`;
+  document.getElementById('totalFacturar').innerText = fmtNum(total);
+  document.getElementById('fechaFacturadoTotal').innerText = '';
+}
+
+// ===== Vista Histórico: un bloque separado por cada fecha en que se marcó "facturado" =====
+function pintarHistoricoAgrupado(data){
+  const cont = document.getElementById('bloquesHistorico');
+  cont.innerHTML = '';
+  idsVisiblesFacturar = [];
+
+  const porFecha = {}; // { 'YYYY-MM-DD': [viajes...] }
+  if(data){
+    Object.entries(data).forEach(([id, v])=>{
+      if(!(v.paraFacturar && v.facturado)) return;
+      const key = v.fechaFacturado || 'sin-fecha';
+      if(!porFecha[key]) porFecha[key] = [];
+      porFecha[key].push({id, ...v});
+      idsVisiblesFacturar.push(id);
+    });
+  }
+
+  const fechas = Object.keys(porFecha).sort().reverse(); // más reciente primero
+  document.getElementById('cardPeriodoFacturar').innerText = `${idsVisiblesFacturar.length} viaje${idsVisiblesFacturar.length===1?'':'s'} · en ${fechas.length} lote${fechas.length===1?'':'s'}`;
+  document.getElementById('totalFacturar').innerText = fmtNum(idsVisiblesFacturar.length ? Object.values(porFecha).flat().reduce((s,v)=>s+(parseFloat(v.totalFact)||0),0) : 0);
+  document.getElementById('fechaFacturadoTotal').innerText = '';
+
+  if(fechas.length === 0){
+    cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">Todavía no marcaste ningún viaje como facturado este mes.</div>';
+    return;
+  }
+
+  fechas.forEach(fecha=>{
+    const viajesLote = porFecha[fecha];
+    const totalLote = viajesLote.reduce((s,v)=>s+(parseFloat(v.totalFact)||0), 0);
+    const etiquetaFecha = fecha === 'sin-fecha' ? 'Sin fecha registrada' : `Facturado el ${fmtFechaCorta(fecha)}`;
+
+    const bloque = document.createElement('div');
+    bloque.style.marginBottom = '18px';
+    bloque.style.border = '1px solid var(--line)';
+    bloque.style.borderRadius = '9px';
+    bloque.style.overflow = 'hidden';
+
+    const filas = viajesLote.map(v=>{
+      const tf = parseFloat(v.totalFact)||0;
+      return `<tr><td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td></tr>`;
+    }).join('');
+
+    bloque.innerHTML = `
+      <div style="background:var(--asphalt-2);color:#fff;padding:9px 12px;">
+        <div style="font-weight:700;">📁 ${etiquetaFecha}</div>
+        <div style="opacity:0.75;font-size:10.5px;">${viajesLote.length} viaje${viajesLote.length===1?'':'s'} · registro histórico</div>
+      </div>
+      <div class="table-wrap" style="border:none;border-radius:0;max-height:none;">
+        <table class="plain">
+          <thead><tr><th>Fecha</th><th>Remito</th><th>Empresa</th><th>Origen</th><th>Producto</th><th class="num">Kilos</th><th class="num">Kg.Af</th><th class="num">Tarifa</th><th class="num">KM Tabla</th><th class="num">Total a Facturar</th></tr></thead>
+          <tbody>${filas}</tbody>
+          <tfoot>
+            <tr class="foot-row"><td colspan="9">Total facturado</td><td class="num highlight">${fmtNum(totalLote)}</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    `;
+    cont.appendChild(bloque);
   });
 }
 
@@ -1806,23 +1905,32 @@ function cargarBoletin(anio, mes){
     const tbody = document.getElementById('tbody-boletin');
     tbody.innerHTML = '';
     let total18 = 0, n = 0;
-    Object.values(data).forEach(v=>{
+    Object.entries(data).forEach(([id, v])=>{
       if(v.chofer !== choferActual) return;
       n++;
       const tf = parseFloat(v.totalFact)||0;
       const porc = tf*0.18;
-      total18 += porc;
+      const excluido = !!v.excluidoBoletin;
+      if(!excluido) total18 += porc;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.origen||''}</td><td class="num">${fmtNum(porc)}</td>`;
+      if(excluido){ tr.style.opacity = '0.55'; tr.style.background = 'var(--panel)'; }
+      const tachado = excluido ? 'text-decoration:line-through;' : '';
+      const notaEfectivo = excluido ? '<div style="font-size:9px;color:#C1503A;text-decoration:none;">Cobrado en efectivo — excluido</div>' : '';
+      tr.innerHTML = `<td style="${tachado}">${v.fecha||''}</td><td style="${tachado}">${v.remito||''}</td><td style="${tachado}">${v.origen||''}${notaEfectivo}</td><td class="num" style="${tachado}">${fmtNum(porc)}</td><td style="text-align:center;"><input type="checkbox" ${excluido?'checked':''} onchange="toggleExcluirBoletin('${id}', this.checked)"></td>`;
       tbody.appendChild(tr);
     });
-    if(n===0) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Sin viajes este mes.</td></tr>';
+    if(n===0) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Sin viajes este mes.</td></tr>';
     document.getElementById('boletinResumen').innerText = `${n} viaje${n===1?'':'s'} · total 18%`;
     document.getElementById('boletinTotal18').innerText = fmtNum(total18);
     document.getElementById('saldoTotal18').innerText = fmtNum(total18);
 
     cargarAdelantos(anio, mes, total18);
   });
+}
+
+function toggleExcluirBoletin(id, valor){
+  const path = `viajes/a${anioActual}/${mesActual}/${id}`;
+  window.fb.update(window.fb.ref(window.fb.db, path), { excluidoBoletin: valor });
 }
 
 function cargarAdelantos(anio, mes, total18){
@@ -1914,15 +2022,20 @@ function cargarCamiones(){
 
 function cargarPanelCamion(){
   if(!window.fb) return;
+  document.getElementById('tituloUnidad').innerText = `(${CAMION_ACTUAL})`;
+  cargarDatosUnidad();
   window.fb.get(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`)).then(snap=>{
-    const p = snap.val() || { consumo:36, precioGasoil:2400, metaService:10000, kmUltimoService:0, fechaUltimoService:null };
+    const p = snap.val() || { consumo:36, precioGasoil:2400, metaService:10000, kmUltimoService:0, fechaUltimoService:null, ajusteKm:0 };
     consumoActualCache = parseFloat(p.consumo) || consumoActualCache;
     document.getElementById('paramConsumo').value = p.consumo;
     document.getElementById('paramPrecioGasoil').value = p.precioGasoil;
     document.getElementById('metaService').value = p.metaService;
+    document.getElementById('ajusteKm').value = p.ajusteKm || 0;
     document.getElementById('ultimoService').innerText = p.fechaUltimoService ? fmtFechaCorta(p.fechaUltimoService) : '— sin registrar';
-    // Suma los KM reales del camión en todo el año actual, desde la fecha del último service
-    sumarKmCamion(CAMION_ACTUAL, p.fechaUltimoService).then(kmAcumulado=>{
+    // Suma los KM reales del camión en todo el año actual, desde la fecha del último service,
+    // más el ajuste manual (km previos a usar la app, cargado a mano por vos)
+    sumarKmCamion(CAMION_ACTUAL, p.fechaUltimoService).then(kmDeViajes=>{
+      const kmAcumulado = kmDeViajes + (parseFloat(p.ajusteKm)||0);
       document.getElementById('gaugeKm').innerHTML = fmtNum(kmAcumulado).split(',')[0] + '<small>km</small>';
       const pct = Math.min(100, (kmAcumulado / (p.metaService||10000)) * 100);
       document.getElementById('gaugeFill').style.width = pct + '%';
@@ -1934,6 +2047,28 @@ function cargarPanelCamion(){
       else if(faltan <= 1000){ alerta.innerText = `⚠️ Faltan ${fmtNum(faltan).split(',')[0]} km`; alerta.style.color = '#F0A63E'; badge.style.display='inline'; }
       else { alerta.innerText = `✅ Faltan ${fmtNum(faltan).split(',')[0]} km`; alerta.style.color = 'var(--green)'; badge.style.display='none'; }
     });
+  });
+}
+
+// Muestra Marca/Modelo y Patente de la unidad actual (guardados en el registro de camiones),
+// y calcula el chofer asignado a partir de quién tiene este camión como "habitual".
+function cargarDatosUnidad(){
+  const c = camionesCache.find(x => x.nombre === CAMION_ACTUAL);
+  document.getElementById('verMarcaModelo').innerText = (c && c.marca) || '—';
+  document.getElementById('verPatente').innerText = (c && c.patente) || '—';
+  document.getElementById('u-marca').value = (c && c.marca) || '';
+  document.getElementById('u-patente').value = (c && c.patente) || '';
+  const asignados = choferesCache.filter(ch => ch.camion === CAMION_ACTUAL).map(ch => ch.nombre);
+  document.getElementById('verChoferAsignado').innerText = asignados.length ? asignados.join(', ') : '—';
+}
+
+function guardarDatosUnidad(){
+  const c = camionesCache.find(x => x.nombre === CAMION_ACTUAL);
+  if(!c){ alert('No se encontró la unidad en el registro. Probá recargar la página.'); return; }
+  const marca = document.getElementById('u-marca').value.trim();
+  const patente = document.getElementById('u-patente').value.trim();
+  window.fb.update(window.fb.ref(window.fb.db, `camiones/${c.id}`), { marca, patente }).then(()=>{
+    toggleForm('formDatosUnidad');
   });
 }
 
@@ -1967,10 +2102,17 @@ function guardarMetaService(){
   window.fb.update(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), { metaService }).then(()=>cargarPanelCamion());
 }
 
+function guardarAjusteKm(){
+  const ajusteKm = document.getElementById('ajusteKm').value;
+  window.fb.update(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), { ajusteKm }).then(()=>cargarPanelCamion());
+}
+
 function resetearService(){
   if(!confirm('¿Confirmás que se hizo el service? Esto reinicia el contador de km en 0.')) return;
   const hoy = new Date().toISOString().slice(0,10);
-  window.fb.update(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), { fechaUltimoService: hoy }).then(()=>cargarPanelCamion());
+  // El ajuste manual (km previos a la app) se "consume" acá — ya cumplió su función,
+  // si no se resetea quedaría sumando para siempre en cada service futuro.
+  window.fb.update(window.fb.ref(window.fb.db, `camionParams/${CAMION_ACTUAL}`), { fechaUltimoService: hoy, ajusteKm: 0 }).then(()=>cargarPanelCamion());
 }
 
 function calcularConsumo(){
@@ -2023,40 +2165,66 @@ let datosViajesPorMesStats = {};   // { anio: { mes: data } }
 let precioGasoilStatsCache = 2400;
 let aniosStatsSuscriptos = new Set();
 
-// ===== BALANCE (agrupado por día) =====
+// ===== BALANCE (agrupado por día, con tilde "Quitar" independiente del Boletín) =====
 function cargarBalance(anio, mes){
-  const tbody = document.getElementById('tbody-balance');
-  if(!tbody || !window.fb) return;
+  const cont = document.getElementById('bloquesBalance');
+  if(!cont || !window.fb) return;
   window.fb.onValue(window.fb.ref(window.fb.db, `viajes/a${anio}/${mes}`), (snap)=>{
     const data = snap.val();
-    tbody.innerHTML = '';
-    const porDia = {}; // { 'YYYY-MM-DD': {facturado, chofer, combustible, n} }
+    cont.innerHTML = '';
+    const porDia = {}; // { 'YYYY-MM-DD': [ {id,...viaje} ] }
     let totFacturado=0, totChofer=0, totCombustible=0;
     if(data){
-      Object.values(data).forEach(v=>{
+      Object.entries(data).forEach(([id, v])=>{
         if(!v.fecha) return;
+        if(!porDia[v.fecha]) porDia[v.fecha] = [];
+        porDia[v.fecha].push({id, ...v});
+        if(v.excluidoBalance) return; // no suma a los totales, pero sigue visible en su bloque
         const facturado = parseFloat(v.totalFact)||0;
         const litros = parseFloat(v.gasoil)||0;
-        const combustible = litros*precioGasoilStatsCache;
-        const chofer = facturado*0.18;
-        if(!porDia[v.fecha]) porDia[v.fecha] = {facturado:0, chofer:0, combustible:0, n:0};
-        porDia[v.fecha].facturado += facturado;
-        porDia[v.fecha].chofer += chofer;
-        porDia[v.fecha].combustible += combustible;
-        porDia[v.fecha].n += 1;
-        totFacturado += facturado; totChofer += chofer; totCombustible += combustible;
+        totFacturado += facturado;
+        totChofer += facturado*0.18;
+        totCombustible += litros*precioGasoilStatsCache;
       });
     }
-    const fechas = Object.keys(porDia).sort();
+    const fechas = Object.keys(porDia).sort().reverse();
     if(fechas.length === 0){
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No hay viajes cargados este mes.</td></tr>';
+      cont.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;">No hay viajes cargados este mes.</div>';
     } else {
       fechas.forEach(f=>{
-        const d = porDia[f];
-        const ganancia = d.facturado - d.chofer - d.combustible;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${fmtFechaCorta(f)}</td><td class="num">${d.n}</td><td class="num">${fmtNum(d.facturado)}</td><td class="num">${fmtNum(d.chofer)}</td><td class="num">${fmtNum(d.combustible)}</td><td class="num" style="color:${ganancia>=0?'var(--green)':'#C1503A'}">${fmtNum(ganancia)}</td>`;
-        tbody.appendChild(tr);
+        const viajesDia = porDia[f];
+        let facturadoDia=0, choferDia=0, combustibleDia=0;
+        const filas = viajesDia.map(v=>{
+          const excluido = !!v.excluidoBalance;
+          const facturado = parseFloat(v.totalFact)||0;
+          const litros = parseFloat(v.gasoil)||0;
+          const combustible = litros*precioGasoilStatsCache;
+          const chofer = facturado*0.18;
+          if(!excluido){ facturadoDia+=facturado; choferDia+=chofer; combustibleDia+=combustible; }
+          const tachado = excluido ? 'text-decoration:line-through;opacity:0.6;' : '';
+          const nota = excluido ? '<div style="font-size:9px;color:#C1503A;text-decoration:none;">Excluido de este balance</div>' : '';
+          return `<tr><td style="${tachado}">${v.empresa||''}${nota}</td><td style="${tachado}">${v.origen||''}</td><td class="num" style="${tachado}">${fmtNum(facturado)}</td><td class="num" style="${tachado}">${fmtNum(chofer)}</td><td class="num" style="${tachado}">${fmtNum(combustible)}</td><td style="text-align:center;"><input type="checkbox" ${excluido?'checked':''} onchange="toggleExcluirBalance('${v.id}', this.checked)"></td></tr>`;
+        }).join('');
+        const gananciaDia = facturadoDia - choferDia - combustibleDia;
+
+        const bloque = document.createElement('div');
+        bloque.style.marginBottom = '14px';
+        bloque.style.border = '1px solid var(--line)';
+        bloque.style.borderRadius = '9px';
+        bloque.style.overflow = 'hidden';
+        bloque.innerHTML = `
+          <div style="background:var(--asphalt-2);color:#fff;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+            <div><b>${fmtFechaCorta(f)}</b> <span style="opacity:0.75;font-size:10.5px;">· ${viajesDia.length} viaje${viajesDia.length===1?'':'s'}</span></div>
+            <div style="font-weight:700;color:${gananciaDia>=0?'#8FD9B4':'#F0A0A0'};">Ganancia: $ ${fmtNum(gananciaDia)}</div>
+          </div>
+          <div class="table-wrap" style="border:none;border-radius:0;max-height:none;">
+            <table class="plain">
+              <thead><tr><th>Empresa</th><th>Origen</th><th class="num">Facturado</th><th class="num">18% Chofer</th><th class="num">Combustible</th><th style="text-align:center;">Quitar</th></tr></thead>
+              <tbody>${filas}</tbody>
+            </table>
+          </div>
+        `;
+        cont.appendChild(bloque);
       });
     }
     const totGanancia = totFacturado - totChofer - totCombustible;
@@ -2065,6 +2233,11 @@ function cargarBalance(anio, mes){
     document.getElementById('balCombustibleMes').innerText = '$ ' + fmtNum(totCombustible).split(',')[0];
     document.getElementById('balChoferMes').innerText = '$ ' + fmtNum(totChofer).split(',')[0];
   });
+}
+
+function toggleExcluirBalance(id, valor){
+  const path = `viajes/a${anioActual}/${mesActual}/${id}`;
+  window.fb.update(window.fb.ref(window.fb.db, path), { excluidoBalance: valor });
 }
 
 function cargarStatsReal(anio){
