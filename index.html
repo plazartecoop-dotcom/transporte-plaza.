@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -232,14 +233,11 @@
   .copy-toast.show{opacity:1;}
 
   @media print{
-    .topbar, .float-bar, .section-actions, .nav-row, .year-row, .month-row, button, .no-capturar{display:none !important;}
+    .topbar, .float-bar, .section-actions, .nav-row, .year-row, .month-row, button{display:none !important;}
     body::before{opacity:0.06;}
     main{padding:0;max-width:100%;}
     .section{display:none !important;}
-    .section.active{display:block !important; overflow:visible !important; height:auto !important; max-height:none !important;}
-    .invoice-card, .table-wrap, table, tbody{overflow:visible !important; height:auto !important; max-height:none !important;}
-    table{page-break-inside:auto;}
-    tr{page-break-inside:avoid;}
+    .section.active{display:block !important;}
   }
   .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px;}
   .form-grid label{font-size:9.5px;color:var(--muted);font-weight:700;display:flex;flex-direction:column;gap:3px;}
@@ -337,7 +335,6 @@
         <label>Consumo (L/100km)<input type="number" id="v-consumo" step="0.1" oninput="recalcularGasoil()"></label>
         <label>Gas-Oil (litros)<input type="number" id="v-gasoil" step="0.1"></label>
       </div>
-      <label style="margin-top:8px;">Observación (opcional)<textarea id="v-observacion" rows="2" placeholder="Ej: descarga demorada 2hs por lluvia" style="width:100%;box-sizing:border-box;resize:vertical;"></textarea></label>
       <div class="form-hint">💡 Kg. Af. se completa solo desde Kilos (mínimo 28.000, el "aforado"). El Total a Facturar y el 18% del chofer se calculan solos a partir de Kg. Af. × Tarifa — podés corregirlo a mano si el viaje es distinto (ej: bolsas).</div>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button class="btn-orange" onclick="guardarViaje()">💾 Guardar viaje</button>
@@ -389,8 +386,6 @@
 
   <section class="section" id="facturar">
     <div class="meta-title">Para Facturar <span id="tituloFacturar">· resumen listo para compartir</span></div>
-    <div id="facturar-anio-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;"></div>
-    <div id="facturar-mes-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"></div>
     <div class="stats-filtros" style="margin-bottom:10px;">
       <button class="stats-filtro active" id="btnFacturarPendientes" onclick="verFacturarPendientes()">🕐 Pendientes</button>
       <button class="stats-filtro" id="btnFacturarHistorico" onclick="verFacturarHistorico()">📁 Histórico facturado</button>
@@ -457,7 +452,7 @@
         </div>
         <div style="display:flex;gap:6px;">
           <button class="btn-ghost" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-          <button class="btn-orange" onclick="compartirComoImagen('boletin')">📷 Compartir imagen</button>
+          <button class="btn-orange" onclick="copiarSeccion('boletin')">↗ Compartir</button>
         </div>
       </div>
       <div class="table-wrap">
@@ -799,7 +794,7 @@ function mostrar(id, btn){
   document.querySelectorAll('.nav-pill').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('floatbar').style.display = (id==='viajes') ? 'flex' : 'none';
-  if(id==='facturar') { renderFacturarTabs(); cargarParaFacturar(anioActual, mesActual); }
+  if(id==='facturar') cargarParaFacturar(anioActual, mesActual);
   if(id==='boletin') cargarBoletin(anioActual, mesActual);
   if(id==='choferes') cargarChoferes();
   if(id==='camion') cargarPanelCamion();
@@ -835,17 +830,15 @@ document.querySelectorAll('.chofer-chip').forEach(c=>{
 updateSel();
 
 // ===== NAVEGACIÓN AÑO / MES =====
-// Arranca siempre en el año y mes de HOY (antes quedaba fijo en Agosto 2026).
-const MESES_APP = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_ARR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const hoyApp = new Date();
 let anioActual = hoyApp.getFullYear();
-let mesActual = MESES_APP[hoyApp.getMonth()];
+let mesActual = MESES_ARR[hoyApp.getMonth()];
 
-// Pone en "active" la píldora de año/mes que corresponda a anioActual/mesActual
-// en TODAS las pestañas (Viajes, Boletín, Panel Camión, Estadísticas, Balance).
-function sincronizarPildorasFecha(){
-  const tituloViajes = document.querySelector('#viajes .meta-title');
-  if(tituloViajes) tituloViajes.innerHTML = mesActual+' '+anioActual+' <span id="contadorViajes">· cargando…</span>';
+// Marca como activa la pestaña de año/mes que corresponde a HOY, en todas las
+// pantallas (Viajes, Boletín, Panel Camión, Balance) — así la app siempre
+// arranca mostrando el mes real, no uno fijo desde el HTML.
+function marcarMesAnioActualComoActivo(){
   document.querySelectorAll('.year-row').forEach(row=>{
     row.querySelectorAll('.year-pill:not(.new-year)').forEach(p=>{
       p.classList.toggle('active', p.innerText.trim() === String(anioActual));
@@ -857,6 +850,7 @@ function sincronizarPildorasFecha(){
     });
   });
 }
+marcarMesAnioActualComoActivo();
 
 function cambiarAnio(anio, btn){
   anioActual = anio;
@@ -968,7 +962,7 @@ let viajeEditandoId = null;
 
 function abrirFormViaje(){
   viajeEditandoId = null;
-  ['v-fecha','v-remito','v-empresa','v-origen','v-producto','v-kilos','v-kgaf','v-tarifa','v-kmtabla','v-totalfact','v-kmreal','v-chofer','v-camion','v-gasoil','v-consumo','v-observacion'].forEach(id=>{
+  ['v-fecha','v-remito','v-empresa','v-origen','v-producto','v-kilos','v-kgaf','v-tarifa','v-kmtabla','v-totalfact','v-kmreal','v-chofer','v-camion','v-gasoil','v-consumo'].forEach(id=>{
     document.getElementById(id).value = '';
   });
   document.getElementById('v-bolsas').checked = false;
@@ -1018,7 +1012,6 @@ function editarViaje(id){
     chequearCamionRegistrado();
     document.getElementById('v-gasoil').value = v.gasoil||'';
     document.getElementById('v-consumo').value = v.consumo||'';
-    document.getElementById('v-observacion').value = v.observacion||'';
     document.getElementById('v-bolsas').checked = (v.tipo === 'bolsas');
     document.getElementById('v-kilos').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
     document.getElementById('v-kgaf').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
@@ -1084,7 +1077,6 @@ function guardarViaje(){
     gasoil: document.getElementById('v-gasoil').value,
     consumo: document.getElementById('v-consumo').value,
     tipo: document.getElementById('v-bolsas').checked ? 'bolsas' : 'granel',
-    observacion: document.getElementById('v-observacion').value,
     paraFacturar: false,
   };
   if(!viaje.fecha || !viaje.empresa){
@@ -1119,11 +1111,6 @@ function toggleParaFacturar(id, valor){
   const path = `viajes/a${anioActual}/${mesActual}/${id}`;
   window.fb.update(window.fb.ref(window.fb.db, path), { paraFacturar: valor });
   updateSel();
-}
-
-function toggleCompartirObservacion(id, valor){
-  const path = `viajes/a${anioActual}/${mesActual}/${id}`;
-  window.fb.update(window.fb.ref(window.fb.db, path), { compartirObservacion: valor });
 }
 
 // ===== TARIFAS POR DESTINO: guardar, leer en vivo, editar =====
@@ -1667,105 +1654,33 @@ document.addEventListener('DOMContentLoaded', initChartStats);
 
 // ===== IMPRIMIR / COPIAR (todas las pestañas) =====
 function imprimirSeccion(){
-  // Si estamos en el Histórico facturado, respeta los lotes tildados: oculta
-  // temporalmente los que el usuario destildó antes de abrir el diálogo de impresión.
-  const ocultados = ocultarLotesDestildados();
-  const restaurar = () => { restaurarLotesOcultos(ocultados); window.removeEventListener('afterprint', restaurar); };
-  window.addEventListener('afterprint', restaurar);
   window.print();
-  setTimeout(restaurar, 5000); // respaldo por si el navegador no dispara "afterprint"
-}
-
-function ocultarLotesDestildados(){
-  const ocultados = [];
-  document.querySelectorAll('#bloquesHistorico .bloque-lote').forEach(bloque=>{
-    const chk = bloque.querySelector('.lote-checkbox');
-    if(chk && !chk.checked){
-      bloque.style.display = 'none';
-      ocultados.push(bloque);
-    }
-  });
-  document.querySelectorAll('.fila-obs').forEach(fila=>{
-    const chk = fila.querySelector('.obs-checkbox');
-    if(chk && !chk.checked){
-      fila.style.display = 'none';
-      ocultados.push(fila);
-    }
-  });
-  return ocultados;
-}
-function restaurarLotesOcultos(ocultados){
-  ocultados.forEach(b => b.style.display = '');
 }
 
 // Genera una imagen (foto) del recuadro de la tabla, tal cual se ve en pantalla,
 // y la manda directo al selector de compartir del celular (WhatsApp, mail, etc).
 // Si el navegador no soporta compartir archivos, la descarga para adjuntarla a mano.
 async function compartirComoImagen(idSeccion){
+  const seccion = document.getElementById(idSeccion);
+  const el = seccion.querySelector('.invoice-card') || seccion;
   if(typeof html2canvas === 'undefined'){
-    alert('No se pudo cargar la herramienta de imagen — probá con Imprimir mientras tanto.');
+    alert('No se pudo cargar la herramienta de imagen (revisá la conexión a internet) — probá con Imprimir o Copiar mientras tanto.');
     return;
   }
   mostrarToast('📷 Generando imagen…');
-
-  const seccion = document.getElementById(idSeccion);
-  const card = seccion.querySelector('.invoice-card') || seccion;
-
-  // Crear un clon del card en un contenedor fuera de pantalla con tamaño completo
-  const contenedor = document.createElement('div');
-  contenedor.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:800px;background:#fff;padding:20px;box-sizing:border-box;';
-  const clon = card.cloneNode(true);
-  // En el Histórico facturado, respetar los lotes que el usuario destildó: no van en la imagen
-  // (hay que hacerlo ANTES de quitar los ".no-capturar", porque el checkbox vive ahí adentro)
-  clon.querySelectorAll('.bloque-lote').forEach(bloque=>{
-    const chk = bloque.querySelector('.lote-checkbox');
-    if(chk && !chk.checked) bloque.remove();
-  });
-  clon.querySelectorAll('.fila-obs').forEach(fila=>{
-    const chk = fila.querySelector('.obs-checkbox');
-    if(chk && !chk.checked) fila.remove();
-  });
-  // Quitar botones y elementos no capturables del clon
-  clon.querySelectorAll('.no-capturar, button').forEach(el => el.remove());
-  // Quitar overflow del clon para que se vea todo
-  clon.style.overflow = 'visible';
-  clon.style.maxHeight = 'none';
-  clon.style.height = 'auto';
-  clon.querySelectorAll('.table-wrap').forEach(el => {
-    el.style.overflow = 'visible';
-    el.style.maxHeight = 'none';
-    el.style.height = 'auto';
-    el.scrollTop = 0;
-  });
-  // El thead usa position:sticky para quedar fijo mientras se scrollea la tabla en pantalla.
-  // Al generar la imagen (todo visible, sin scroll) ese "sticky" puede quedar mal calculado
-  // y renderizarse trabado en la posición de scroll que tenía la tabla original al momento
-  // de tocar "Compartir imagen" (a veces terminando abajo, tapando el total). En la imagen
-  // no hace falta que nada quede pegado, así que lo pasamos a estático en el clon.
-  clon.querySelectorAll('thead th').forEach(th => {
-    th.style.position = 'static';
-    th.style.top = 'auto';
-    th.style.boxShadow = 'none';
-  });
-  contenedor.appendChild(clon);
-  document.body.appendChild(contenedor);
-
   try{
-    const canvas = await html2canvas(contenedor, {
+    const canvas = await html2canvas(el, {
       backgroundColor: '#ffffff',
       scale: 2,
-      useCORS: true,
-      scrollX: 0,
-      scrollY: 0
+      ignoreElements: (node) => node.classList && node.classList.contains('no-capturar')
     });
-    document.body.removeChild(contenedor);
     canvas.toBlob(async (blob) => {
       const nombreArchivo = `${idSeccion}_${anioActual}_${mesActual}.png`;
       const file = new File([blob], nombreArchivo, { type: 'image/png' });
       if(navigator.canShare && navigator.canShare({ files: [file] })){
         try{
           await navigator.share({ files: [file], title: 'Transporte Plaza' });
-        }catch(e){ /* usuario canceló */ }
+        }catch(e){ /* el usuario canceló el compartir, no hace falta avisar nada */ }
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1775,7 +1690,6 @@ async function compartirComoImagen(idSeccion){
       }
     }, 'image/png');
   }catch(e){
-    if(document.body.contains(contenedor)) document.body.removeChild(contenedor);
     alert('No se pudo generar la imagen: ' + e.message);
   }
 }
@@ -1854,25 +1768,6 @@ function verFacturarHistorico(){
   cargarParaFacturar(anioActual, mesActual);
 }
 
-function renderFacturarTabs(){
-  const MESES_F = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const anioDiv = document.getElementById('facturar-anio-tabs');
-  const mesDiv = document.getElementById('facturar-mes-tabs');
-  if(!anioDiv || !mesDiv) return;
-  const anios = [2025, 2026, 2027];
-  anioDiv.innerHTML = anios.map(a=>`<button onclick="cambiarFacturarAnio(${a})" style="padding:3px 10px;border-radius:6px;border:1px solid ${a===anioActual?'#222':'#ccc'};background:${a===anioActual?'#222':'#f5f5f5'};color:${a===anioActual?'#fff':'#333'};cursor:pointer;font-size:11px;font-weight:600">${a}</button>`).join('');
-  mesDiv.innerHTML = MESES_F.map(m=>`<button onclick="cambiarFacturarMes('${m}')" style="padding:3px 10px;border-radius:6px;border:1px solid ${m===mesActual?'#e67e22':'#ccc'};background:${m===mesActual?'#e67e22':'#f5f5f5'};color:${m===mesActual?'#fff':'#333'};cursor:pointer;font-size:11px">${m}</button>`).join('');
-}
-function cambiarFacturarAnio(anio){
-  anioActual = anio;
-  renderFacturarTabs();
-  cargarParaFacturar(anioActual, mesActual);
-}
-function cambiarFacturarMes(mes){
-  mesActual = mes;
-  renderFacturarTabs();
-  cargarParaFacturar(anioActual, mesActual);
-}
 function cargarParaFacturar(anio, mes){
   if(!window.fb) return;
   const nombreVista = vistaFacturarActual === 'pendientes' ? 'Pendientes' : 'Histórico facturado';
@@ -1903,19 +1798,6 @@ function pintarPendientes(data){
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
       tbody.appendChild(tr);
-      if(v.observacion){
-        const compartir = v.compartirObservacion !== false;
-        const filaObs = document.createElement('tr');
-        filaObs.className = 'fila-obs';
-        filaObs.innerHTML = `<td colspan="10" style="padding:2px 10px 10px;font-size:11px;">
-          <div style="color:var(--orange-dark);margin-bottom:3px;">📝 ${v.observacion}</div>
-          <label class="no-capturar" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--muted);">
-            <input type="checkbox" class="obs-checkbox" ${compartir?'checked':''} onchange="toggleCompartirObservacion('${id}', this.checked)" style="width:14px;height:14px;">
-            Compartir esta observación con Finanzas
-          </label>
-        </td>`;
-        tbody.appendChild(filaObs);
-      }
     });
   }
   if(n===0) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">No hay viajes tildados "Para Facturar" este mes.</td></tr>';
@@ -1957,8 +1839,6 @@ function pintarHistoricoAgrupado(data){
     const etiquetaFecha = fecha === 'sin-fecha' ? 'Sin fecha registrada' : `Facturado el ${fmtFechaCorta(fecha)}`;
 
     const bloque = document.createElement('div');
-    bloque.className = 'bloque-lote';
-    bloque.dataset.fecha = fecha;
     bloque.style.marginBottom = '18px';
     bloque.style.border = '1px solid var(--line)';
     bloque.style.borderRadius = '9px';
@@ -1966,29 +1846,13 @@ function pintarHistoricoAgrupado(data){
 
     const filas = viajesLote.map(v=>{
       const tf = parseFloat(v.totalFact)||0;
-      let fila = `<tr><td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td></tr>`;
-      if(v.observacion){
-        const compartir = v.compartirObservacion !== false;
-        fila += `<tr class="fila-obs"><td colspan="10" style="padding:2px 10px 10px;font-size:11px;">
-          <div style="color:var(--orange-dark);margin-bottom:3px;">📝 ${v.observacion}</div>
-          <label class="no-capturar" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--muted);">
-            <input type="checkbox" class="obs-checkbox" ${compartir?'checked':''} onchange="toggleCompartirObservacion('${v.id}', this.checked)" style="width:14px;height:14px;">
-            Compartir esta observación con Finanzas
-          </label>
-        </td></tr>`;
-      }
-      return fila;
+      return `<tr><td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td></tr>`;
     }).join('');
 
     bloque.innerHTML = `
-      <div style="background:var(--asphalt-2);color:#fff;padding:9px 12px;display:flex;align-items:center;gap:10px;">
-        <label class="no-capturar" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" class="lote-checkbox" checked style="width:16px;height:16px;">
-        </label>
-        <div>
-          <div style="font-weight:700;">📁 ${etiquetaFecha}</div>
-          <div style="opacity:0.75;font-size:10.5px;">${viajesLote.length} viaje${viajesLote.length===1?'':'s'} · registro histórico</div>
-        </div>
+      <div style="background:var(--asphalt-2);color:#fff;padding:9px 12px;">
+        <div style="font-weight:700;">📁 ${etiquetaFecha}</div>
+        <div style="opacity:0.75;font-size:10.5px;">${viajesLote.length} viaje${viajesLote.length===1?'':'s'} · registro histórico</div>
       </div>
       <div class="table-wrap" style="border:none;border-radius:0;max-height:none;">
         <table class="plain">
@@ -2357,10 +2221,9 @@ function cargarBalance(anio, mes){
           const combustible = litros*precioGasoilStatsCache;
           const chofer = facturado*0.18;
           if(!excluido){ facturadoDia+=facturado; choferDia+=chofer; combustibleDia+=combustible; }
-          const gananciaViaje = facturado - chofer - combustible;
           const tachado = excluido ? 'text-decoration:line-through;opacity:0.6;' : '';
           const nota = excluido ? '<div style="font-size:9px;color:#C1503A;text-decoration:none;">Excluido de este balance</div>' : '';
-          return `<tr><td style="${tachado}">${v.empresa||''}${nota}</td><td style="${tachado}">${v.origen||''}</td><td class="num" style="${tachado}">${fmtNum(facturado)}</td><td class="num" style="${tachado}">${fmtNum(chofer)}</td><td class="num" style="${tachado}">${fmtNum(combustible)}</td><td class="num" style="${tachado}color:${gananciaViaje>=0?'#3F8F63':'#C1503A'};font-weight:600;">${fmtNum(gananciaViaje)}</td><td style="text-align:center;"><input type="checkbox" ${excluido?'checked':''} onchange="toggleExcluirBalance('${v.id}', this.checked)"></td></tr>`;
+          return `<tr><td style="${tachado}">${v.empresa||''}${nota}</td><td style="${tachado}">${v.origen||''}</td><td class="num" style="${tachado}">${fmtNum(facturado)}</td><td class="num" style="${tachado}">${fmtNum(chofer)}</td><td class="num" style="${tachado}">${fmtNum(combustible)}</td><td style="text-align:center;"><input type="checkbox" ${excluido?'checked':''} onchange="toggleExcluirBalance('${v.id}', this.checked)"></td></tr>`;
         }).join('');
         const gananciaDia = facturadoDia - choferDia - combustibleDia;
 
@@ -2376,7 +2239,7 @@ function cargarBalance(anio, mes){
           </div>
           <div class="table-wrap" style="border:none;border-radius:0;max-height:none;">
             <table class="plain">
-              <thead><tr><th>Empresa</th><th>Origen</th><th class="num">Facturado</th><th class="num">18% Chofer</th><th class="num">Combustible</th><th class="num">Ganancia</th><th style="text-align:center;">Quitar</th></tr></thead>
+              <thead><tr><th>Empresa</th><th>Origen</th><th class="num">Facturado</th><th class="num">18% Chofer</th><th class="num">Combustible</th><th style="text-align:center;">Quitar</th></tr></thead>
               <tbody>${filas}</tbody>
             </table>
           </div>
@@ -2539,10 +2402,7 @@ function esperarFirebaseYcargar(intentos){
     document.getElementById('tbody-viajes').innerHTML = '<tr><td colspan="18" style="text-align:center;color:#C1503A;padding:20px;">⚠️ No se pudo conectar a Firebase. Revisá que la página esté publicada por https (GitHub Pages).</td></tr>';
   }
 }
-document.addEventListener('DOMContentLoaded', ()=>{
-  sincronizarPildorasFecha();
-  esperarFirebaseYcargar(25);
-});
+document.addEventListener('DOMContentLoaded', ()=>esperarFirebaseYcargar(25));
 </script>
 
 </body>
