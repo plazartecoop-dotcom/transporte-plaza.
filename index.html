@@ -335,6 +335,13 @@
         <label>Gas-Oil (litros)<input type="number" id="v-gasoil" step="0.1"></label>
       </div>
       <div class="form-hint">💡 Kg. Af. se completa solo desde Kilos (mínimo 28.000, el "aforado"). El Total a Facturar y el 18% del chofer se calculan solos a partir de Kg. Af. × Tarifa — podés corregirlo a mano si el viaje es distinto (ej: bolsas).</div>
+      <div style="margin-top:8px;">
+        <label style="font-size:9.5px;color:var(--muted);font-weight:700;">Comentario <span style="font-weight:400;">(opcional)</span></label>
+        <textarea id="v-comentario" placeholder="Ej: se demoró por lluvia..." style="width:100%;resize:none;height:44px;font-family:'JetBrains Mono',monospace;font-size:12px;padding:8px;border:1px solid var(--line);border-radius:6px;margin-top:4px;"></textarea>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:700;margin-top:6px;cursor:pointer;">
+        <input type="checkbox" id="v-comp-finanzas" style="width:16px;height:16px;"> 📤 Compartir este comentario con Finanzas
+      </label>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button class="btn-orange" onclick="guardarViaje()">💾 Guardar viaje</button>
         <button class="btn-ghost" onclick="cerrarFormViaje()">Cancelar</button>
@@ -932,7 +939,13 @@ function cargarViajes(anio, mes){
       } else if(v.paraFacturar){
         tr.classList.add('selected');
       }
-      const chipFecha = v.facturado ? `<span class="badge-facturado">✓ Facturado</span> ${v.fecha||''}` : (v.fecha||'');
+      let chipFecha = v.facturado ? `<span class="badge-facturado">✓ Facturado</span> ${v.fecha||''}` : (v.fecha||'');
+      if(v.comentario){
+        const comEsc = v.comentario.replace(/"/g,'&quot;');
+        const colorIcono = v.compFinanzas ? '#25D366' : '#999';
+        const tituloIcono = v.compFinanzas ? ' (compartido con Finanzas)' : ' (solo visible para vos)';
+        chipFecha += ` <span title="${comEsc}${tituloIcono}" style="cursor:help;color:${colorIcono};">💬</span>`;
+      }
       tr.innerHTML = `
         <td class="checkbox-cell"><input type="checkbox" ${v.paraFacturar?'checked':''} ${v.facturado?'disabled':''} onchange="toggleParaFacturar('${id}', this.checked)"></td>
         <td class="facturable">${chipFecha}</td><td class="facturable">${v.remito||''}</td><td class="facturable">${v.empresa||''}</td>
@@ -961,10 +974,11 @@ let viajeEditandoId = null;
 
 function abrirFormViaje(){
   viajeEditandoId = null;
-  ['v-fecha','v-remito','v-empresa','v-origen','v-producto','v-kilos','v-kgaf','v-tarifa','v-kmtabla','v-totalfact','v-kmreal','v-chofer','v-camion','v-gasoil','v-consumo'].forEach(id=>{
+  ['v-fecha','v-remito','v-empresa','v-origen','v-producto','v-kilos','v-kgaf','v-tarifa','v-kmtabla','v-totalfact','v-kmreal','v-chofer','v-camion','v-gasoil','v-consumo','v-comentario'].forEach(id=>{
     document.getElementById(id).value = '';
   });
   document.getElementById('v-bolsas').checked = false;
+  document.getElementById('v-comp-finanzas').checked = false;
   document.getElementById('tarjetaCamion').style.display = 'none';
   document.getElementById('v-consumo').value = consumoActualCache; // valor provisorio, se confirma abajo
   document.getElementById('v-kilos').closest('label').style.opacity = '1';
@@ -1012,6 +1026,8 @@ function editarViaje(id){
     document.getElementById('v-gasoil').value = v.gasoil||'';
     document.getElementById('v-consumo').value = v.consumo||'';
     document.getElementById('v-bolsas').checked = (v.tipo === 'bolsas');
+    document.getElementById('v-comentario').value = v.comentario||'';
+    document.getElementById('v-comp-finanzas').checked = !!v.compFinanzas;
     document.getElementById('v-kilos').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
     document.getElementById('v-kgaf').closest('label').style.opacity = (v.tipo==='bolsas') ? '0.4' : '1';
     viajeEditandoId = id;
@@ -1076,6 +1092,8 @@ function guardarViaje(){
     gasoil: document.getElementById('v-gasoil').value,
     consumo: document.getElementById('v-consumo').value,
     tipo: document.getElementById('v-bolsas').checked ? 'bolsas' : 'granel',
+    comentario: document.getElementById('v-comentario').value.trim(),
+    compFinanzas: document.getElementById('v-comp-finanzas').checked,
     paraFacturar: false,
   };
   if(!viaje.fecha || !viaje.empresa){
@@ -1795,7 +1813,8 @@ function pintarPendientes(data){
       const tf = parseFloat(v.totalFact)||0;
       total += tf;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
+      const notaComentario = (v.comentario && v.compFinanzas) ? `<div style="font-size:9px;color:#1F6B45;font-style:italic;">💬 ${v.comentario}</div>` : '';
+      tr.innerHTML = `<td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}${notaComentario}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td>`;
       tbody.appendChild(tr);
     });
   }
@@ -1845,7 +1864,8 @@ function pintarHistoricoAgrupado(data){
 
     const filas = viajesLote.map(v=>{
       const tf = parseFloat(v.totalFact)||0;
-      return `<tr><td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td></tr>`;
+      const notaComentario = (v.comentario && v.compFinanzas) ? `<div style="font-size:9px;color:#1F6B45;font-style:italic;">💬 ${v.comentario}</div>` : '';
+      return `<tr><td>${v.fecha||''}</td><td>${v.remito||''}</td><td>${v.empresa||''}</td><td>${v.origen||''}</td><td>${v.producto||''}${notaComentario}</td><td class="num">${v.kilos||''}</td><td class="num">${v.kgaf||''}</td><td class="num">${fmtNum(v.tarifa)}</td><td class="num">${v.kmtabla||''}</td><td class="num">${fmtNum(tf)}</td></tr>`;
     }).join('');
 
     bloque.innerHTML = `
