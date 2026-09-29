@@ -735,13 +735,13 @@
 
     <div class="stat-pair" style="margin-top:12px;">
       <div class="stat-box"><div class="lbl">Facturado (año)</div><div class="val" id="statFacturadoAnio">$ 0</div></div>
-      <div class="stat-box"><div class="lbl">Ganancia neta (año)</div><div class="val" id="statGananciaAnio" style="color:var(--green);">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Ganancia bruta (año)</div><div class="val" id="statGananciaAnio" style="color:var(--green);">$ 0</div></div>
       <div class="stat-box"><div class="lbl">Combustible (año)</div><div class="val" id="statCombustibleAnio">$ 0</div></div>
       <div class="stat-box"><div class="lbl">Chofer 18% (año)</div><div class="val" id="statChoferAnio">$ 0</div></div>
     </div>
     <div class="stat-pair" style="margin-top:6px;">
       <div class="stat-box"><div class="lbl">Facturado (mes)</div><div class="val" id="statFacturadoMes">$ 0</div></div>
-      <div class="stat-box"><div class="lbl">Ganancia neta (mes)</div><div class="val" id="statGananciaMes" style="color:var(--green);">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Ganancia bruta (mes)</div><div class="val" id="statGananciaMes" style="color:var(--green);">$ 0</div></div>
       <div class="stat-box"><div class="lbl">Combustible (mes)</div><div class="val" id="statCombustibleMes">$ 0</div></div>
       <div class="stat-box"><div class="lbl">Chofer 18% (mes)</div><div class="val" id="statChoferMes">$ 0</div></div>
     </div>
@@ -775,8 +775,8 @@
 
     <div class="stat-pair" style="margin-top:6px;">
       <div class="stat-box"><div class="lbl">Facturado del mes</div><div class="val" id="balFacturadoMes">$ 0</div></div>
-      <div class="stat-box"><div class="lbl">Ganancia del mes</div><div class="val" id="balGananciaMes" style="color:var(--green);">$ 0</div></div>
-      <div class="stat-box"><div class="lbl">Combustible del mes</div><div class="val" id="balCombustibleMes">$ 0</div></div>
+      <div class="stat-box"><div class="lbl">Ganancia bruta del mes</div><div class="val" id="balGananciaMes" style="color:var(--green);">$ 0</div><div class="lbl" id="balGananciaPct" style="margin-top:2px;"></div></div>
+      <div class="stat-box"><div class="lbl">Combustible del mes</div><div class="val" id="balCombustibleMes">$ 0</div><div class="lbl" id="balCombustiblePct" style="margin-top:2px;"></div></div>
       <div class="stat-box"><div class="lbl">Chofer 18% del mes</div><div class="val" id="balChoferMes">$ 0</div></div>
     </div>
 
@@ -2271,6 +2271,12 @@ function cargarBalance(anio, mes){
     document.getElementById('balGananciaMes').innerText = '$ ' + fmtNum(totGanancia).split(',')[0];
     document.getElementById('balCombustibleMes').innerText = '$ ' + fmtNum(totCombustible).split(',')[0];
     document.getElementById('balChoferMes').innerText = '$ ' + fmtNum(totChofer).split(',')[0];
+    // % sobre lo Facturado — Combustible y Ganancia varían mes a mes, a diferencia
+    // del Chofer que siempre es 18% fijo (por eso ese no necesita el cálculo).
+    const pctGanancia = totFacturado > 0 ? (totGanancia/totFacturado*100) : 0;
+    const pctCombustible = totFacturado > 0 ? (totCombustible/totFacturado*100) : 0;
+    document.getElementById('balGananciaPct').innerText = totFacturado > 0 ? `${pctGanancia.toFixed(1)}% del facturado` : '';
+    document.getElementById('balCombustiblePct').innerText = totFacturado > 0 ? `${pctCombustible.toFixed(1)}% del facturado` : '';
   });
 }
 
