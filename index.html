@@ -303,9 +303,9 @@
         <span><i class="dot steel"></i> Interno</span>
       </div>
     </div>
-    <div class="section-actions">
+    <div class="section-actions no-capturar">
       <button class="btn-accion" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-      <button class="btn-accion" onclick="copiarSeccion('viajes')">📋 Copiar</button>
+      <button class="btn-accion" onclick="compartirComoImagen('viajes')">📷 Copiar imagen</button>
       <button class="btn-accion" style="border-color:var(--orange);color:var(--orange);font-weight:800;" onclick="abrirFormViaje()">➕ Nuevo viaje</button>
     </div>
 
@@ -423,7 +423,7 @@
         </div>
         <div class="no-capturar" style="display:flex;gap:6px;flex-wrap:wrap;">
           <button class="btn-ghost" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-          <button class="btn-orange" onclick="compartirComoImagen('facturar')">📷 Compartir imagen</button>
+          <button class="btn-orange" onclick="compartirComoImagen('facturar')">📷 Copiar imagen</button>
           <button class="btn-orange" id="btnMarcarFacturado" style="background:var(--green);" onclick="marcarComoFacturado()">✅ Marcar como facturado</button>
         </div>
       </div>
@@ -477,7 +477,7 @@
         </div>
         <div style="display:flex;gap:6px;">
           <button class="btn-ghost" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-          <button class="btn-orange" onclick="copiarSeccion('boletin')">↗ Compartir</button>
+          <button class="btn-orange" onclick="compartirComoImagen('boletin')">📷 Copiar imagen</button>
         </div>
       </div>
       <div class="table-wrap">
@@ -520,7 +520,7 @@
 
   <section class="section" id="choferes">
     <div class="meta-title">Choferes <span>· ficha y datos de contacto</span></div>
-    <div class="section-actions">
+    <div class="section-actions no-capturar">
       <button class="btn-accion" style="border-color:var(--orange);color:var(--orange);font-weight:800;" onclick="abrirFormChofer()">➕ Nuevo chofer</button>
     </div>
 
@@ -572,9 +572,9 @@
       <button class="month-pill" onclick="cambiarMes('Nov',this)">Nov</button>
       <button class="month-pill" onclick="cambiarMes('Dic',this)">Dic</button>
     </div>
-    <div class="section-actions">
+    <div class="section-actions no-capturar">
       <button class="btn-accion" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-      <button class="btn-accion" onclick="copiarSeccion('camion')">📋 Copiar</button>
+      <button class="btn-accion" onclick="compartirComoImagen('camion')">📷 Copiar imagen</button>
     </div>
     <div class="camion-tabs" id="camionTabs">
       <div class="camion-tab" style="opacity:0.5;">Cargando…</div>
@@ -649,9 +649,9 @@
 
   <section class="section" id="tarifas">
     <div class="meta-title">Tarifas <span>· por destino, con vigencia por fecha</span></div>
-    <div class="section-actions">
+    <div class="section-actions no-capturar">
       <button class="btn-accion" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-      <button class="btn-accion" onclick="copiarSeccion('tarifas')">📋 Copiar</button>
+      <button class="btn-accion" onclick="compartirComoImagen('tarifas')">📷 Copiar imagen</button>
     </div>
 
     <div class="invoice-card" style="margin-bottom:12px;">
@@ -721,9 +721,9 @@
 
   <section class="section" id="stats">
     <div class="meta-title">Estadísticas <span>· combustible, tarifas y ganancias</span></div>
-    <div class="section-actions">
+    <div class="section-actions no-capturar">
       <button class="btn-accion" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-      <button class="btn-accion" onclick="copiarSeccion('stats')">📋 Copiar</button>
+      <button class="btn-accion" onclick="compartirComoImagen('stats')">📷 Copiar imagen</button>
     </div>
     <div class="year-row" id="yearRowStats">
       <button class="year-pill" onclick="cambiarAnio(2025,this)">2025</button>
@@ -794,9 +794,9 @@
 
   <section class="section" id="balance">
     <div class="meta-title">Balance <span>· resumen agrupado por día</span></div>
-    <div class="section-actions">
+    <div class="section-actions no-capturar">
       <button class="btn-accion" onclick="imprimirSeccion()">🖨️ Imprimir</button>
-      <button class="btn-accion" onclick="copiarSeccion('balance')">📋 Copiar</button>
+      <button class="btn-accion" onclick="compartirComoImagen('balance')">📷 Copiar imagen</button>
     </div>
     <div class="year-row" id="yearRowBalance">
       <button class="year-pill" onclick="cambiarAnio(2025,this)">2025</button>
@@ -1753,17 +1753,28 @@ async function compartirComoImagen(idSeccion){
     canvas.toBlob(async (blob) => {
       const nombreArchivo = `${idSeccion}_${anioActual}_${mesActual}.png`;
       const file = new File([blob], nombreArchivo, { type: 'image/png' });
+      // Celular: abre el selector nativo para compartir (WhatsApp, mail, etc.)
       if(navigator.canShare && navigator.canShare({ files: [file] })){
         try{
           await navigator.share({ files: [file], title: 'Transporte Plaza' });
         }catch(e){ /* el usuario canceló el compartir, no hace falta avisar nada */ }
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = nombreArchivo; a.click();
-        URL.revokeObjectURL(url);
-        mostrarToast('📷 Imagen descargada — adjuntala donde quieras');
+        return;
       }
+      // PC de escritorio: copia la imagen directo al portapapeles (como la Herramienta
+      // de Recorte) — un solo clic, y después se pega con Ctrl+V donde sea.
+      if(navigator.clipboard && window.ClipboardItem){
+        try{
+          await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
+          mostrarToast('✅ Imagen copiada — pegala con Ctrl+V en el mail o donde quieras');
+          return;
+        }catch(e){ /* si el navegador bloquea copiar al portapapeles, cae a la descarga de abajo */ }
+      }
+      // Respaldo final, por si el navegador no soporta nada de lo anterior
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = nombreArchivo; a.click();
+      URL.revokeObjectURL(url);
+      mostrarToast('📷 Imagen descargada — adjuntala donde quieras');
     }, 'image/png');
   }catch(e){
     alert('No se pudo generar la imagen: ' + e.message);
