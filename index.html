@@ -153,8 +153,11 @@
   .btn-ghost{background:transparent;border:1px solid #4A565B;color:#fff;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;padding:5px 9px;border-radius:6px;cursor:pointer;}
   .btn-orange{background:var(--orange);border:none;color:#fff;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;padding:5px 9px;border-radius:6px;cursor:pointer;}
   table.plain{width:100%;border-collapse:collapse;font-size:10.5px;}
-  table.plain th{text-align:left;padding:6px 8px;font-size:8.7px;text-transform:uppercase;letter-spacing:0.3px;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;}
-  table.plain td{padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  table.plain th{text-align:left;padding:5px 6px;font-size:8.7px;text-transform:uppercase;letter-spacing:0.3px;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;}
+  table.plain td{padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap;}
+  #tabla th,#tabla td{padding:4px 5px;font-size:9.5px;}
+  #tabla th{font-size:8px;}
+  #wrapTablaFacturar th,#wrapTablaFacturar td,.table-wrap .plain th,.table-wrap .plain td{padding:4px 5px;}
   table.plain td.num,table.plain th.num{text-align:right;font-variant-numeric:tabular-nums;}
   .foot-row td{font-weight:700;background:#FAF9F6;border-top:2px solid var(--line);}
   .foot-row .highlight{color:var(--amber-deep);font-size:12px;}
@@ -1744,12 +1747,26 @@ async function compartirComoImagen(idSeccion){
     return;
   }
   mostrarToast('📷 Generando imagen…');
+  // Si hay tablas con scroll (como Para Facturar o Viajes), las destapamos un
+  // instante para que la foto salga completa, sin cortes ni necesidad de haber
+  // scrolleado antes de sacarla.
+  const wraps = Array.from(el.querySelectorAll('.table-wrap'));
+  const estilosOriginales = wraps.map(w => ({ el:w, overflow:w.style.overflow, maxHeight:w.style.maxHeight, width:w.style.width }));
+  let anchoVentana = Math.max(window.innerWidth, 800);
+  wraps.forEach(w=>{
+    w.style.overflow = 'visible';
+    w.style.maxHeight = 'none';
+    w.style.width = 'max-content';
+    anchoVentana = Math.max(anchoVentana, w.scrollWidth + 40);
+  });
   try{
     const canvas = await html2canvas(el, {
       backgroundColor: '#ffffff',
       scale: 2,
+      windowWidth: anchoVentana,
       ignoreElements: (node) => node.classList && node.classList.contains('no-capturar')
     });
+    estilosOriginales.forEach(o=>{ o.el.style.overflow = o.overflow; o.el.style.maxHeight = o.maxHeight; o.el.style.width = o.width; });
     canvas.toBlob(async (blob) => {
       const nombreArchivo = `${idSeccion}_${anioActual}_${mesActual}.png`;
       const file = new File([blob], nombreArchivo, { type: 'image/png' });
@@ -1777,6 +1794,7 @@ async function compartirComoImagen(idSeccion){
       mostrarToast('📷 Imagen descargada — adjuntala donde quieras');
     }, 'image/png');
   }catch(e){
+    estilosOriginales.forEach(o=>{ o.el.style.overflow = o.overflow; o.el.style.maxHeight = o.maxHeight; o.el.style.width = o.width; });
     alert('No se pudo generar la imagen: ' + e.message);
   }
 }
