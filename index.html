@@ -157,7 +157,19 @@
   table.plain td{padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap;}
   #tabla th,#tabla td{padding:4px 5px;font-size:9.5px;}
   #tabla th{font-size:8px;}
-  #wrapTablaFacturar th,#wrapTablaFacturar td,.table-wrap .plain th,.table-wrap .plain td{padding:4px 5px;}
+  table.tabla-facturar{table-layout:fixed;font-size:9.3px;}
+  table.tabla-facturar th,table.tabla-facturar td{padding:4px 3px;white-space:normal;word-break:break-word;}
+  table.tabla-facturar th{font-size:7.6px;}
+  table.tabla-facturar th:nth-child(1),table.tabla-facturar td:nth-child(1){width:9%;}
+  table.tabla-facturar th:nth-child(2),table.tabla-facturar td:nth-child(2){width:9%;}
+  table.tabla-facturar th:nth-child(3),table.tabla-facturar td:nth-child(3){width:15%;}
+  table.tabla-facturar th:nth-child(4),table.tabla-facturar td:nth-child(4){width:11%;}
+  table.tabla-facturar th:nth-child(5),table.tabla-facturar td:nth-child(5){width:11%;}
+  table.tabla-facturar th:nth-child(6),table.tabla-facturar td:nth-child(6){width:9%;}
+  table.tabla-facturar th:nth-child(7),table.tabla-facturar td:nth-child(7){width:9%;}
+  table.tabla-facturar th:nth-child(8),table.tabla-facturar td:nth-child(8){width:9%;}
+  table.tabla-facturar th:nth-child(9),table.tabla-facturar td:nth-child(9){width:7%;}
+  table.tabla-facturar th:nth-child(10),table.tabla-facturar td:nth-child(10){width:11%;white-space:nowrap;}
   table.plain td.num,table.plain th.num{text-align:right;font-variant-numeric:tabular-nums;}
   .foot-row td{font-weight:700;background:#FAF9F6;border-top:2px solid var(--line);}
   .foot-row .highlight{color:var(--amber-deep);font-size:12px;}
@@ -431,9 +443,9 @@
         </div>
       </div>
       <div class="table-wrap" id="wrapTablaFacturar">
-      <table class="plain">
+      <table class="plain tabla-facturar">
         <thead id="theadFacturar">
-          <tr><th>Fecha</th><th>Remito</th><th>Empresa</th><th>Origen</th><th>Producto</th><th class="num">Kilos</th><th class="num">Kg.Af</th><th class="num">Tarifa</th><th class="num">KM Tabla</th><th class="num">Total a Facturar</th></tr>
+          <tr><th>Fecha</th><th>Remito</th><th>Empresa</th><th>Origen</th><th>Prod.</th><th class="num">Kilos</th><th class="num">Kg.Af</th><th class="num">Tarifa</th><th class="num">KM T.</th><th class="num">Total Fact.</th></tr>
         </thead>
         <tbody id="tbody-facturar">
           <tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">Cargando…</td></tr>
@@ -1962,8 +1974,8 @@ function pintarHistoricoAgrupado(data){
         <div style="opacity:0.75;font-size:10.5px;">${viajesLote.length} viaje${viajesLote.length===1?'':'s'} · registro histórico</div>
       </div>
       <div class="table-wrap" style="border:none;border-radius:0;max-height:none;">
-        <table class="plain">
-          <thead><tr><th>Fecha</th><th>Remito</th><th>Empresa</th><th>Origen</th><th>Producto</th><th class="num">Kilos</th><th class="num">Kg.Af</th><th class="num">Tarifa</th><th class="num">KM Tabla</th><th class="num">Total a Facturar</th></tr></thead>
+        <table class="plain tabla-facturar">
+          <thead><tr><th>Fecha</th><th>Remito</th><th>Empresa</th><th>Origen</th><th>Prod.</th><th class="num">Kilos</th><th class="num">Kg.Af</th><th class="num">Tarifa</th><th class="num">KM T.</th><th class="num">Total Fact.</th></tr></thead>
           <tbody>${filas}</tbody>
           <tfoot>
             <tr class="foot-row"><td colspan="9">Total facturado</td><td class="num highlight">${fmtNum(totalLote)}</td></tr>
