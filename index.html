@@ -247,11 +247,19 @@
   .copy-toast.show{opacity:1;}
 
   @media print{
-    .topbar, .float-bar, .section-actions, .nav-row, .year-row, .month-row, button{display:none !important;}
+    @page{size:A4 landscape;margin:10mm;}
+    *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+    .topbar, .float-bar, .section-actions, .nav-row, .year-row, .month-row, .stats-filtros, .no-capturar, button{display:none !important;}
     body::before{opacity:0.06;}
     main{padding:0;max-width:100%;}
     .section{display:none !important;}
     .section.active{display:block !important;}
+    .table-wrap{overflow:visible !important;max-height:none !important;width:100% !important;box-shadow:none !important;}
+    .invoice-head{display:flex !important;}
+    table{page-break-inside:auto;}
+    thead{display:table-header-group;}
+    tfoot{display:table-footer-group;}
+    tr{page-break-inside:avoid;}
   }
   .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:8px;}
   .form-grid label{font-size:9.5px;color:var(--muted);font-weight:700;display:flex;flex-direction:column;gap:3px;}
@@ -1764,12 +1772,12 @@ async function compartirComoImagen(idSeccion){
   // scrolleado antes de sacarla.
   const wraps = Array.from(el.querySelectorAll('.table-wrap'));
   const estilosOriginales = wraps.map(w => ({ el:w, overflow:w.style.overflow, maxHeight:w.style.maxHeight, width:w.style.width }));
-  let anchoVentana = Math.max(window.innerWidth, 800);
+  // La foto siempre se arma con ancho de pantalla de compu (mínimo 900px), así
+  // todas las columnas salen completas aunque estés mirando desde el celular.
+  const anchoVentana = Math.max(window.innerWidth, 900);
   wraps.forEach(w=>{
     w.style.overflow = 'visible';
     w.style.maxHeight = 'none';
-    w.style.width = 'max-content';
-    anchoVentana = Math.max(anchoVentana, w.scrollWidth + 40);
   });
   try{
     const canvas = await html2canvas(el, {
@@ -1782,8 +1790,11 @@ async function compartirComoImagen(idSeccion){
     canvas.toBlob(async (blob) => {
       const nombreArchivo = `${idSeccion}_${anioActual}_${mesActual}.png`;
       const file = new File([blob], nombreArchivo, { type: 'image/png' });
-      // Celular: abre el selector nativo para compartir (WhatsApp, mail, etc.)
-      if(navigator.canShare && navigator.canShare({ files: [file] })){
+      // Solo en celular se abre el selector nativo de compartir (WhatsApp, mail, etc.).
+      // En la PC NO: Windows abre su ventana de "Compartir" y te frena, así que ahí
+      // se copia directo al portapapeles (más abajo).
+      const esCelular = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      if(esCelular && navigator.canShare && navigator.canShare({ files: [file] })){
         try{
           await navigator.share({ files: [file], title: 'Transporte Plaza' });
         }catch(e){ /* el usuario canceló el compartir, no hace falta avisar nada */ }
